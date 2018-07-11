@@ -1,0 +1,50 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %} {{ controller_name }}!{% endblock %}
+
+{% block body %}
+    <div class="col-md-12 ">
+        <h1>All Media</h1>
+        <a href="/user/addnew" class="btn btn-success pull-right">Add New Post</a>
+        <br><br>
+        <hr>
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% if posts|length > 0 %}
+            <table class="table table-striped">
+                <thead>
+                    <th>#</th>
+                    <th>Thumbnail</th>
+                    <th>Name</th>
+                    <th>Created At</th>
+                    <th>Delete</th>
+                </thead>
+                <tbody>
+                {% for post in posts %}
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <form action="/user/editpost" method="post">
+                        <td><button class="btn btn-warning" name="media_id" value="">Edit</button></td>
+                    </form>
+                </tr>
+                </tbody>
+                {% endfor %}
+            </table>
+        {% else %}
+            <h3>There are no posts for this user</h3>
+        {% endif %}
+    </div>
+{% endblock %}

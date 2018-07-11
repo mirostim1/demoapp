@@ -1,0 +1,33 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %} Add New User{% endblock %}
+
+{% block body %}
+    <style>
+    </style>
+
+    <div class="col-md-12 ">
+        <h1>Add New User</h1>
+        <hr>
+        <a href="/admin/allusers" class="btn btn-warning pull-right">Cancel</a>
+
+        <br><br>
+
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+        {{ form_widget(form) }}
+        {{ form_end(form) }}
+
+    </div>
+{% endblock %}

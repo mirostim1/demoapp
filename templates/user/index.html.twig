@@ -1,0 +1,57 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Login user{% endblock %}
+
+{% block body %}
+<style>
+    #login {
+        margin-top: 50px;
+        border-radius: 0px;
+        border: 1px dotted black;
+    }
+</style>
+
+<div class="col-md-12 text-center">
+    <div id="login" class="col-md-offset-4 col-md-4 text-left">
+        <h1 style="text-align: center">Login User</h1>
+        <hr>
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">
+                {{ message }}
+                <span class="pull-right">4</span>
+            </div>
+        {% endfor %}
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">
+                {{ message }}
+                <span class="pull-right">4</span>
+            </div>
+        {% endfor %}
+
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+        {{ form_widget(form) }}
+        {{ form_end(form) }}
+
+        <br><br>
+        <p class="text-center">
+            If you don't have an account please <a href="/user/register">register</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+        var i = 4;
+        setInterval(function() {
+            i--;
+            if(i == 0) {
+                $('.alert').hide();
+            }
+            $('.pull-right').text(i);
+        }, 1000);
+    });
+</script>
+{% endblock %}

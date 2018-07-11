@@ -1,0 +1,31 @@
+{% extends 'user.html.twig' %}
+
+{% block title %} {{ controller_name }}!{% endblock %}
+
+{% block body %}
+    <style>
+    </style>
+
+    <div class="col-md-12 ">
+        <h1>Edit Post</h1>
+        <hr>
+        <a href="/user/posts" class="btn btn-info">Back to Posts</a>
+
+        <form action="/user/deletepost" method="post">
+            <button style="margin-top:-32px" class="btn btn-danger pull-right" name="post_id" value="{{ post_id }}">Delete Post</button>
+        </form>
+
+        <br><br>
+
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+        {{ form_widget(form) }}
+        {{ form_end(form) }}
+
+    </div>
+{% endblock %}

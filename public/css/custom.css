@@ -1,0 +1,33 @@
+body {
+    background-color: #f7f7f7;
+}
+
+.navbar-inverse {
+    background-color: #383d41;
+}
+
+.btn {
+    border-radius: 0;
+    outline:none;
+}
+
+input.form-control {
+    border-radius: 0;
+}
+
+textarea.form-control {
+    border-radius: 0;
+}
+
+#lnk {
+    text-decoration: none;
+}
+
+.prod:hover {
+    opacity: 0.7;
+}
+
+#lnk:hover {
+    color: #46b8da;
+    text-decoration: none;
+}
