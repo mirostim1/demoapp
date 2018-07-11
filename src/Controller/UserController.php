@@ -5,8 +5,6 @@ namespace App\Controller;
 use App\Entity\Category;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
-use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -23,7 +21,6 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
 use App\Entity\User;
 use App\Entity\Post;
-use App\Form\Login;
 
 class UserController extends AbstractController
 {
@@ -86,8 +83,6 @@ class UserController extends AbstractController
         ]);
     }
 
-
-
     /**
      * @Route("/user/profile", name="user_profile")
      */
@@ -117,6 +112,77 @@ class UserController extends AbstractController
                 'email' => $session->get('email'),
                 'is_admin' => $isAdmin,
                 'nr_posts' => $nrPosts
+            ]
+        );
+    }
+
+    /**
+     * @Route("/user/newpass", name="user_new_password")
+     */
+    public function newPassword(Request $request)
+    {
+        $user = new User();
+
+        $form = $this->createFormBuilder($user)
+            ->add('email', EmailType::class, array(
+                'label' => 'Enter Email *',
+                'required' => true,
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('password', RepeatedType::class, array(
+                'type' => PasswordType::class,
+                'required' => true,
+                'first_options'  => array(
+                    'label' => 'Password *',
+                    'attr' => ['class' => 'form-control']
+                ),
+                'second_options' => array(
+                    'label' => 'Repeat Password *',
+                    'attr' => ['class' => 'form-control']
+                ),
+                'invalid_message' => 'The password fields must match.'
+            ))
+            ->add('submit', SubmitType::class, array(
+                'label' => 'Submit',
+                'attr' => ['class' => 'form-control btn btn-success']
+            ))
+            ->getForm();
+
+        $form->handleRequest($request);
+
+        if($form->isSubmitted() && $form->isValid()) {
+            $data = $form->getData();
+
+            $session = new Session();
+            $userId = $session->get('user_id');
+
+            $repository = $this->getDoctrine()->getRepository(User::class);
+
+            $newPass = $repository->findOneBy([
+                'id' => $userId
+            ]);
+
+            $entityManager = $this->getDoctrine()->getManager();
+
+            if($newPass->getEmail() == $data->getEmail()) {
+                $newPass->setPassword($data->getPassword());
+
+                $entityManager->persist($newPass);
+
+                try {
+                    $entityManager->flush();
+                    $this->addFlash('success', 'Password changed successfully');
+                    return $this->redirectToRoute('user_profile');
+                } catch(\Exception $e) {
+                    $this->addFlash('error', 'Error during changing password');
+                    return $this->redirectToRoute('user_profile');
+                }
+            }
+        }
+
+        return $this->render('user/newpass.html.twig',
+            [
+                'form' => $form->createView()
             ]
         );
     }

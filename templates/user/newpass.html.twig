@@ -1,0 +1,20 @@
+{% extends 'user.html.twig' %}
+
+{% block title %} Change Password{% endblock %}
+
+{% block body %}
+    <style>
+    </style>
+
+    <div class="col-md-12 ">
+        <h1>Change Password</h1>
+        <hr>
+        <a href="/user/profile" class="btn btn-warning pull-right">Cancel</a>
+        <br><br>
+
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+        {{ form_widget(form) }}
+        {{ form_end(form) }}
+
+    </div>
+{% endblock %}

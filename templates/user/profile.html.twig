@@ -1,19 +1,37 @@
 {% extends 'user.html.twig' %}
 
-{% block title %} {{ controller_name }}!{% endblock %}
+{% block title %} User Profile{% endblock %}
 
 {% block body %}
 <style>
+    #passwd {
+        display: none;
+    }
 </style>
 
 <div class="col-md-12 ">
     <h1>Welcome</h1>
     <hr>
+
     <div class="row">
         <div class="col-md-4">
             <img class="" height=250px" src="{{ asset('img/user.jpg') }}" />
         </div>
         <div class="col-md-8">
+            {% for message in app.flashes('error') %}
+                <div class="alert alert-danger">
+                    {{ message }}
+                    <span class="pull-right">4</span>
+                </div>
+            {% endfor %}
+
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success">
+                    {{ message }}
+                    <span class="pull-right">4</span>
+                </div>
+            {% endfor %}
+
             <h3>{{ email }}</h3>
             <hr>
             <table class="table table-striped">
@@ -30,8 +48,24 @@
                     <td>{{ nr_posts }}</td>
                 </tr>
             </table>
+            <br><br>
+            <a href="/user/newpass" class="btn btn-info">Change password</a>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+        var i = 4;
+        setInterval(function() {
+            i--;
+            if(i == 0) {
+                $('.alert').hide();
+            }
+            $('.pull-right').text(i);
+        }, 1000);
+    });
+</script>
 {% endblock %}

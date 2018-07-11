@@ -24,14 +24,12 @@ class User
      * @ORM\Column(type="string", length=100)
      * @Assert\Email()
      * @Assert\NotBlank()
-     * @Assert\NotNull()
      */
     private $email;
 
     /**
      * @ORM\Column(type="string", length=100)
      * @Assert\NotBlank()
-     * @Assert\NotNull()
      * @Assert\Length(
      *     min = 2,
      *     max = 50
