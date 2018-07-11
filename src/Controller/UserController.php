@@ -381,7 +381,7 @@ class UserController extends AbstractController
 
         try {
             $entityManager->flush();
-            $this->addFlash('success', 'Post has been succesfully deleted');
+            $this->addFlash('success', 'Post has been successfully deleted');
         } catch(\Exception $e) {
             $this->addFlash('error', 'Error while deleting post');
         }

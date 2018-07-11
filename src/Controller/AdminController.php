@@ -77,6 +77,188 @@ class AdminController extends AbstractController
     }
 
     /**
+     * @Route("/admin/editpost", name="admin_edit_post")
+     */
+    public function editpost(Request $request)
+    {
+        $postId = $request->request->get('post_id');
+
+        $repository = $this->getDoctrine()->getRepository(Category::class);
+        $categories = $repository->findAll();
+
+        $cats = [0 => null];
+        foreach($categories as $category) {
+            array_push($cats, [$category->getName() => $category->getId()]);
+        }
+
+        $repository = $this->getDoctrine()->getRepository(Post::class);
+
+        $post = $repository->findOneBy([
+            'id' => $postId
+        ]);
+
+        $form = $this->createFormBuilder($post)
+            ->add('title', TextType::class, array(
+                'label' => 'Enter Title *',
+                'required' => true,
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('content', TextareaType::class, array(
+                'label' => 'Enter Content of Post *',
+                'required' => true,
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('category_id', ChoiceType::class, array(
+                'choices' =>  $cats,
+                'label' => 'Select Category',
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('id', HiddenType::class, array())
+            ->add('register', SubmitType::class, array(
+                'label' => 'Update',
+                'attr' => ['class' => 'form-control btn btn-success']
+            ))
+            ->getForm();
+
+        $form->handleRequest($request);
+
+        if($form->isSubmitted() && $form->isValid()) {
+            $post = $form->getData();
+            //var_dump($post); die();
+
+            $entityManager = $this->getDoctrine()->getManager();
+
+            $editPost = $entityManager->getRepository(Post::class)->find($post['id']);
+            $editPost->setTitle($post['title']);
+            $editPost->setContent($post['content']);
+            $editPost->setCategoryId($post['category_id']);
+            $date = new \DateTime();
+            $editPost->setEditedAt($date);
+
+            try {
+                $entityManager->flush();
+                $this->addFlash('success', 'Successfully edited');
+                return $this->redirectToRoute('admin_posts');
+            } catch(\Exception $e) {
+                $this->addFlash('error', 'Error during editing');
+                return $this->redirectToRoute('admin_edit_post');
+            }
+        }
+
+        return $this->render('admin/editpost.html.twig',
+            [
+                'controller_name' => 'UserController',
+                'form' => $form->createView(),
+                'post_id' => $postId
+            ]);
+    }
+
+    /**
+     * @Route("/admin/addnew", name="admin_add_new_post")
+     */
+    public function addnew(Request $request)
+    {
+        $session = new Session();
+        $userId = $session->get('user_id');
+
+        $repository = $this->getDoctrine()->getRepository(Category::class);
+
+        $categories = $repository->findAll();
+
+        $cats = [0 => null];
+        foreach($categories as $category) {
+            array_push($cats, [$category->getName() => $category->getId()]);
+        }
+
+        $post = new Post();
+
+        $form = $this->createFormBuilder($post)
+            ->add('title', TextType::class, array(
+                'label' => 'Enter Title *',
+                'required' => true,
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('content', TextareaType::class, array(
+                'label' => 'Enter Content of Post *',
+                'required' => true,
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('user_id', HiddenType::class, array(
+                'data' => $userId
+            ))
+            ->add('category_id', ChoiceType::class, array(
+                'choices' =>  $cats,
+                'label' => 'Select Category',
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('register', SubmitType::class, array(
+                'label' => 'Save',
+                'attr' => ['class' => 'form-control btn btn-success']
+            ))
+            ->getForm();
+
+        $form->handleRequest($request);
+
+        if($form->isSubmitted() && $form->isValid()) {
+            $post = $form->getData();
+
+            $entityManager = $this->getDoctrine()->getManager();
+
+            $newPost = new Post();
+            $newPost->setTitle($post->getTitle());
+            $newPost->setContent($post->getContent());
+            $newPost->setCategoryId($post->getCategoryId());
+            $date = new \DateTime();
+            $newPost->setCreatedAt($date);
+            $newPost->setEditedAt($date);
+            $newPost->setUserId($session->get('user_id'));
+
+            $entityManager->persist($newPost);
+
+            try {
+                $entityManager->flush();
+                $this->addFlash('success', 'New post saved');
+                return $this->redirectToRoute('user_posts');
+            } catch(\Exception $e) {
+                $this->addFlash('error', 'Error during saving');
+                return $this->redirectToRoute('user_add_new_post');
+            }
+        }
+
+        return $this->render('admin/addnew.html.twig',
+            [
+                'controller_name' => 'AdminController',
+                'form' => $form->createView()
+            ]
+        );
+    }
+
+    /**
+     * @Route("/admin/deletepost", name="admin_delete_post")
+     */
+    public function deletePost(Request $request)
+    {
+        $postId = $request->request->get('post_id');
+
+        $repository = $this->getDoctrine()->getRepository(Post::class);
+
+        $entityManager = $this->getDoctrine()->getManager();
+
+        $post = $repository->find($postId);
+
+        $entityManager->remove($post);
+
+        try {
+            $entityManager->flush();
+            $this->addFlash('success', 'Post has been succesfully deleted');
+        } catch(\Exception $e) {
+            $this->addFlash('error', 'Error while deleting post');
+        }
+
+        return $this->redirectToRoute('admin_posts');
+    }
+
+    /**
      * @Route("/admin/allusers", name="admin_users")
      */
     public function allusers()
@@ -167,6 +349,10 @@ class AdminController extends AbstractController
             'id' => $request->request->get('user_id')
         ]);
 
+        if(isset($user)) {
+            $userId = $user->getId();
+        }
+
         $form = $this->createFormBuilder($user)
             ->add('is_admin', ChoiceType::class, array(
                 'choices' => array('User' => 0, 'Admin' => 1),
@@ -188,12 +374,13 @@ class AdminController extends AbstractController
 
         if($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
-            var_dump($user); die();
+
+            $userId = $user['id'];
+
             $entityManager = $this->getDoctrine()->getManager();
             $editUser = $entityManager->getRepository(User::class)->find($user['id']);
 
             $editUser->setIsAdmin($user['is_admin']);
-            $editUser->setPassword($user['password']);
 
             try {
                 $entityManager->flush();
@@ -208,9 +395,35 @@ class AdminController extends AbstractController
         return $this->render('admin/edituser.html.twig',
             [
                 'controller_name' => 'AdminController',
-                'form' => $form->createView()
+                'form' => $form->createView(),
+                'user_id' => $userId
             ]
         );
+    }
+
+    /**
+     * @Route("/admin/deleteuser", name="admin_delete_user")
+     */
+    public function deleteUser(Request $request)
+    {
+        $userId = $request->request->get('user_id');
+        
+        $repository = $this->getDoctrine()->getRepository(User::class);
+
+        $entityManager = $this->getDoctrine()->getManager();
+
+        $user = $repository->find($userId);
+
+        $entityManager->remove($user);
+
+        try {
+            $entityManager->flush();
+            $this->addFlash('success', 'User has been successfully deleted');
+        } catch(\Exception $e) {
+            $this->addFlash('error', 'Error while deleting user');
+        }
+
+        return $this->redirectToRoute('admin_users');
     }
 
     /**
@@ -232,194 +445,6 @@ class AdminController extends AbstractController
                 'posts' => $posts
             ]
         );
-    }
-
-    /**
-     * @Route("/admin/addnew", name="admin_add_new_post")
-     */
-    public function addnew(Request $request)
-    {
-        $session = new Session();
-        $userId = $session->get('user_id');
-
-        $repository = $this->getDoctrine()->getRepository(Category::class);
-
-        $categories = $repository->findAll();
-
-        $cats = [0 => null];
-        foreach($categories as $category) {
-            array_push($cats, [$category->getName() => $category->getId()]);
-        }
-
-        //var_dump($cats['data']); die();
-
-        $post = new Post();
-
-        $form = $this->createFormBuilder($post)
-            ->add('title', TextType::class, array(
-                'label' => 'Enter Title *',
-                'required' => true,
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('content', TextareaType::class, array(
-                'label' => 'Enter Content of Post *',
-                'required' => true,
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('user_id', HiddenType::class, array(
-                'data' => $userId
-            ))
-            ->add('category_id', ChoiceType::class, array(
-                'choices' =>  $cats,
-                'label' => 'Select Category',
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('register', SubmitType::class, array(
-                'label' => 'Save',
-                'attr' => ['class' => 'form-control btn btn-success']
-            ))
-            ->getForm();
-
-        $form->handleRequest($request);
-
-        if($form->isSubmitted() && $form->isValid()) {
-            $post = $form->getData();
-
-            $entityManager = $this->getDoctrine()->getManager();
-
-            $newPost = new Post();
-            $newPost->setTitle($post->getTitle());
-            $newPost->setContent($post->getContent());
-            $newPost->setCategoryId($post->getCategoryId());
-            $date = new \DateTime();
-            $newPost->setCreatedAt($date);
-            $newPost->setEditedAt($date);
-            $newPost->setUserId($session->get('user_id'));
-
-            $entityManager->persist($newPost);
-
-            try {
-                $entityManager->flush();
-                $this->addFlash('success', 'New post saved');
-                return $this->redirectToRoute('user_posts');
-            } catch(\Exception $e) {
-                $this->addFlash('error', 'Error during saving');
-                return $this->redirectToRoute('user_add_new_post');
-            }
-        }
-
-        return $this->render('admin/addnew.html.twig',
-            [
-                'controller_name' => 'AdminController',
-                'form' => $form->createView()
-            ]
-        );
-    }
-
-    /**
-     * @Route("/admin/editpost", name="admin_edit_post")
-     */
-    public function editpost(Request $request)
-    {
-        $postId = $request->request->get('post_id');
-
-        $session = new Session();
-        $userId = $session->get('user_id');
-
-        $repository = $this->getDoctrine()->getRepository(Category::class);
-
-        $categories = $repository->findAll();
-
-        $cats = [0 => null];
-        foreach($categories as $category) {
-            array_push($cats, [$category->getName() => $category->getId()]);
-        }
-
-        $repository = $this->getDoctrine()->getRepository(Post::class);
-
-        $post = $repository->findOneBy([
-            'id' => $postId
-        ]);
-
-        $form = $this->createFormBuilder($post)
-            ->add('title', TextType::class, array(
-                'label' => 'Enter Title *',
-                'required' => true,
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('content', TextareaType::class, array(
-                'label' => 'Enter Content of Post *',
-                'required' => true,
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('category_id', ChoiceType::class, array(
-                'choices' =>  $cats,
-                'label' => 'Select Category',
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('id', HiddenType::class, array())
-            ->add('register', SubmitType::class, array(
-                'label' => 'Update',
-                'attr' => ['class' => 'form-control btn btn-success']
-            ))
-            ->getForm();
-
-        $form->handleRequest($request);
-
-        if($form->isSubmitted() && $form->isValid()) {
-            $post = $form->getData();
-
-            $entityManager = $this->getDoctrine()->getManager();
-            $editPost = $entityManager->getRepository(Post::class)->find($post['id']);
-
-            $editPost->setTitle($post['title']);
-            $editPost->setContent($post['content']);
-            $editPost->setCategoryId($post['category_id']);
-            $date = new \DateTime();
-            $editPost->setEditedAt($date);
-            $editPost->setUserId($session->get('user_id'));
-
-            try {
-                $entityManager->flush();
-                $this->addFlash('success', 'Successfully edited');
-                return $this->redirectToRoute('admin_allposts');
-            } catch(\Exception $e) {
-                $this->addFlash('error', 'Error during editing');
-                return $this->redirectToRoute('admin_edit_post');
-            }
-        }
-
-        return $this->render('admin/editpost.html.twig',
-            [
-                'controller_name' => 'UserController',
-                'form' => $form->createView(),
-                'post_id' => $postId
-            ]);
-    }
-
-    /**
-     * @Route("/admin/deletepost", name="admin_delete_post")
-     */
-    public function deletePost(Request $request)
-    {
-        $postId = $request->request->get('post_id');
-
-        $repository = $this->getDoctrine()->getRepository(Post::class);
-
-        $entityManager = $this->getDoctrine()->getManager();
-
-        $post = $repository->find($postId);
-
-        $entityManager->remove($post);
-
-        try {
-            $entityManager->flush();
-            $this->addFlash('success', 'Post has been succesfully deleted');
-        } catch(\Exception $e) {
-            $this->addFlash('error', 'Error while deleting post');
-        }
-
-        return $this->redirectToRoute('admin_posts');
     }
 
     /**

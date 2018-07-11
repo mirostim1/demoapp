@@ -9,7 +9,10 @@
     <div class="col-md-12 ">
         <h1>Edit User</h1>
         <hr>
-        <a href="/admin/allusers" class="btn btn-warning pull-right">Cancel</a>
+        <a href="/admin/allusers" class="btn btn-warning">Cancel</a>
+        <form action="/admin/deleteuser" method="post">
+            <button style="margin-top:-32px" type="submit" class="btn btn-danger pull-right" name="user_id" value="{{ user_id }}">Delete</button>
+        </form>
 
         <br><br>
 

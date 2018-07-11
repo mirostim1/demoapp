@@ -1,6 +1,6 @@
 {% extends 'admin.html.twig' %}
 
-{% block title %} {{ controller_name }}!{% endblock %}
+{% block title %} Edit Post{% endblock %}
 
 {% block body %}
     <style>
@@ -9,7 +9,7 @@
     <div class="col-md-12 ">
         <h1>Edit Post</h1>
         <hr>
-        <a href="/admin/allposts" class="btn btn-info">Back to Posts</a>
+        <a href="/admin/allposts" class="btn btn-warning">Cancel</a>
 
         <form action="/admin/deletepost" method="post">
             <button style="margin-top:-32px" class="btn btn-danger pull-right" name="post_id" value="{{ post_id }}">Delete Post</button>
