@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Category;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
@@ -108,12 +109,17 @@ class AdminController extends AbstractController
                 'required' => true,
                 'attr' => ['class' => 'form-control']
             ))
+            ->add('image_path', FileType::class, array(
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('id', HiddenType::class, array(
+                'attr' => ['class' => 'form-control']
+            ))
             ->add('category_id', ChoiceType::class, array(
                 'choices' =>  $cats,
                 'label' => 'Select Category',
                 'attr' => ['class' => 'form-control']
             ))
-            ->add('id', HiddenType::class, array())
             ->add('register', SubmitType::class, array(
                 'label' => 'Update',
                 'attr' => ['class' => 'form-control btn btn-success']
@@ -185,6 +191,9 @@ class AdminController extends AbstractController
             ))
             ->add('user_id', HiddenType::class, array(
                 'data' => $userId
+            ))
+            ->add('image_path', FileType::class, array(
+                'attr' => ['class' => 'form-control']
             ))
             ->add('category_id', ChoiceType::class, array(
                 'choices' =>  $cats,

@@ -21,14 +21,12 @@
             {% for message in app.flashes('error') %}
                 <div class="alert alert-danger">
                     {{ message }}
-                    <span class="pull-right">4</span>
                 </div>
             {% endfor %}
 
             {% for message in app.flashes('success') %}
                 <div class="alert alert-success">
                     {{ message }}
-                    <span class="pull-right">4</span>
                 </div>
             {% endfor %}
 
@@ -53,19 +51,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block javascripts %}
-<script>
-    $(document).ready(function() {
-        var i = 4;
-        setInterval(function() {
-            i--;
-            if(i == 0) {
-                $('.alert').hide();
-            }
-            $('.pull-right').text(i);
-        }, 1000);
-    });
-</script>
 {% endblock %}

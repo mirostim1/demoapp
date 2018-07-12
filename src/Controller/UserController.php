@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Category;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -12,7 +13,6 @@ use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,12 +21,17 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
 use App\Entity\User;
 use App\Entity\Post;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+
 
 class UserController extends AbstractController
 {
     /**
-     * @Route("/user/", name="user")
-     */
+    * @Route("/user/", name="user")
+    */
     public function index(Request $request)
     {
         $user = new User();
@@ -35,7 +40,7 @@ class UserController extends AbstractController
             ->add('email', EmailType::class, array(
                 'label' => 'Enter Email *',
                 'required' => true,
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control', 'id' => 'dist']
             ))
             ->add('password', PasswordType::class, array(
                 'label' => 'Enter Password *',
@@ -171,12 +176,15 @@ class UserController extends AbstractController
 
                 try {
                     $entityManager->flush();
-                    $this->addFlash('success', 'Password changed successfully');
+                    $this->addFlash('success', 'Password has been changed successfully');
                     return $this->redirectToRoute('user_profile');
                 } catch(\Exception $e) {
                     $this->addFlash('error', 'Error during changing password');
                     return $this->redirectToRoute('user_profile');
                 }
+            } else {
+                $this->addFlash('error', 'Email do not match your registration email. Please enter correct email.');
+                return $this->redirectToRoute('user_new_password');
             }
         }
 
@@ -222,16 +230,16 @@ class UserController extends AbstractController
         $form->handleRequest($request);
 
         if($form->isSubmitted() && $form->isValid()) {
-            $user = $form->getData();
+            $userData = $form->getData();
 
             $entityManager = $this->getDoctrine()->getManager();
 
-            $newUser = new User();
-            $newUser->setEmail($user->getEmail());
-            $newUser->setPassword($user->getPassword());
-            $newUser->setIsAdmin(0);
+            $user->setEmail($userData->getEmail());
 
-            $entityManager->persist($newUser);
+            $user->setPassword($userData->getPassword());
+            $user->setIsAdmin(0);
+
+            $entityManager->persist($user);
 
             try {
                 $entityManager->flush();
@@ -260,6 +268,8 @@ class UserController extends AbstractController
         $posts = $repository->findBy([
             'user_id' => $session->get('user_id')
         ]);
+
+        rsort($posts);
 
         return $this->render('user/posts.html.twig',
             [
@@ -300,6 +310,9 @@ class UserController extends AbstractController
                 'required' => true,
                 'attr' => ['class' => 'form-control']
             ))
+            ->add('image_path', FileType::class, array(
+                'attr' => ['class' => 'form-control']
+            ))
             ->add('user_id', HiddenType::class, array(
                 'data' => $userId
             ))
@@ -318,23 +331,32 @@ class UserController extends AbstractController
 
         if($form->isSubmitted() && $form->isValid()) {
             $post = $form->getData();
+            //var_dump($post); die();
 
             $entityManager = $this->getDoctrine()->getManager();
 
-            $newPost = new Post();
-            $newPost->setTitle($post->getTitle());
-            $newPost->setContent($post->getContent());
-            $newPost->setCategoryId($post->getCategoryId());
+            $post->setTitle($post->getTitle());
+            $post->setContent($post->getContent());
+            $post->setCategoryId($post->getCategoryId());
             $date = new \DateTime();
-            $newPost->setCreatedAt($date);
-            $newPost->setEditedAt($date);
-            $newPost->setUserId($session->get('user_id'));
+            $post->setCreatedAt($date);
+            $post->setEditedAt($date);
+            $post->setUserId($session->get('user_id'));
 
-            $entityManager->persist($newPost);
+            $newFileName = 'image' . time();
+            $file = $form['image_path']->getData();
+            $extension = $file->guessExtension();
+            if($file->move('img/posts', $newFileName . '.' . $extension)) {
+                $post->setImagePath($newFileName . '.' . $extension);
+            } else {
+                $post->setImagePath(null);
+            }
+
+            $entityManager->persist($post);
 
             try {
                 $entityManager->flush();
-                $this->addFlash('success', 'New post saved');
+                $this->addFlash('success', 'New post successfully added');
                 return $this->redirectToRoute('user_posts');
             } catch(\Exception $e) {
                 $this->addFlash('error', 'Error during saving');
@@ -384,6 +406,10 @@ class UserController extends AbstractController
                 'label' => 'Enter Content of Post *',
                 'required' => true,
                 'attr' => ['class' => 'form-control']
+            ))
+            ->add('image_path', FileType::class, array(
+                'attr' => ['class' => 'form-control'],
+                'data_class' => null
             ))
             ->add('category_id', ChoiceType::class, array(
                 'choices' =>  $cats,
@@ -447,6 +473,10 @@ class UserController extends AbstractController
 
         try {
             $entityManager->flush();
+
+            $fileSystem = new Filesystem();
+            $filename = 'img/posts/' . $post->getImagePath();
+            $fileSystem->remove($filename);
             $this->addFlash('success', 'Post has been successfully deleted');
         } catch(\Exception $e) {
             $this->addFlash('error', 'Error while deleting post');
