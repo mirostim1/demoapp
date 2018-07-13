@@ -585,6 +585,83 @@ class AdminController extends AbstractController
     }
 
     /**
+     * @Route("/admin/allcategories", name="admin_categories")
+     */
+    public function categories(Request $request)
+    {
+        $repository = $this->getDoctrine()->getRepository(Category::class);
+        $categories = $repository->findAll();
+        rsort($categories);
+
+        $category = new Category();
+
+        $form = $this->createFormBuilder($category)
+            ->add('name', TextType::class, array(
+                'label' => 'Name for category *',
+                'attr' => ['class' => 'form-control']
+            ))
+            ->add('submit', SubmitType::class, array(
+                'label' => 'Add',
+                'attr' => ['class' => 'form-control btn btn-success']
+            ))
+            ->getForm();
+
+        $form->handleRequest($request);
+
+        if($form->isSubmitted() && $form->isValid()) {
+            $category = $form->getData();
+
+            $date = new \DateTime();
+            $category->setCreatedAt($date);
+
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->persist($category);
+
+            try {
+                $entityManager->flush();
+                $this->addFlash('success', 'Category has been successfully created');
+            } catch(\Exception $e) {
+                $this->addFlash('error', 'Error during saving new category');
+            }
+
+            return $this->redirectToRoute('admin_categories');
+        }
+
+        return $this->render('admin/allcategories.html.twig',
+            [
+                'categories' => $categories,
+                'form' => $form->createView(),
+            ]
+        );
+    }
+
+    /**
+     * @Route("/admin/deletecategory", name="admin_delete_category")
+     */
+    public function deleteCategory(Request $request)
+    {
+        $categoryId = $request->request->get('category_id');
+
+        $repository = $this->getDoctrine()->getRepository(Category::class);
+        $category = $repository->findOneBy(
+            [
+                'id' => $categoryId
+            ]
+        );
+
+        try {
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->remove($category);
+            $entityManager->flush();
+            $this->addFlash('success', 'Category has been succesfully deleted');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Error during delete category');
+        }
+
+        return $this->redirectToRoute('admin_categories');
+    }
+
+    /**
      * @Route("/admin/logout", name="admin_logout")
      */
     public function logout()

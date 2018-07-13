@@ -1,0 +1,55 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %} All Categories{% endblock %}
+
+{% block body %}
+    <div class="col-md-8">
+        <h1>All Categories</h1>
+        <small>List of all categories for posts.</small>
+        <br><br>
+        <hr>
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% if categories|length > 0 %}
+            <table class="table table-striped">
+                <thead>
+                    <th>Name</th>
+                    <th>Created At</th>
+                </thead>
+                <tbody>
+                {% for category in categories %}
+                <tr>
+                    <td>{{ category.name|capitalize }}</td>
+                    <td>{{ category.created_at|date('d/m/Y H:i') }}</td>
+                    <form action="/admin/deletecategory" method="post">
+                        <td><button class="btn btn-danger" name="category_id" value="{{ category.id }}">Delete</button></td>
+                    </form>
+                </tr>
+                </tbody>
+                {% endfor %}
+            </table>
+        {% else %}
+            <h3>There are no categories for display</h3>
+        {% endif %}
+    </div>
+    <div class="col-md-4">
+        <h1>Create New</h1>
+        <small>Create new category for posts.</small>
+        <br><br>
+        <hr>
+
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+        {{ form_widget(form) }}
+        {{ form_end(form) }}
+    </div>
+{% endblock %}
