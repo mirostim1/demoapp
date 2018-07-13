@@ -5,7 +5,9 @@
 {% block body %}
     <div class="col-md-12 ">
         <h1>All Media</h1>
-        <a href="/user/addnew" class="btn btn-success pull-right">Add New Post</a>
+        <small>List of all media files in Posts directory</small>
+        <form action="/admin/deleteimages" method="post">
+        <button type="submit" class="btn btn-warning pull-right">Delete selected</button>
         <br><br>
         <hr>
         {% for message in app.flashes('error') %}
@@ -20,31 +22,52 @@
             </div>
         {% endfor %}
 
-        {% if posts|length > 0 %}
+        {% if images|length > 0 %}
             <table class="table table-striped">
                 <thead>
-                    <th>#</th>
+                    <th><input id="chkbox" type="checkbox"></th>
                     <th>Thumbnail</th>
                     <th>Name</th>
-                    <th>Created At</th>
+                    <th>Used in Post</th>
                     <th>Delete</th>
                 </thead>
                 <tbody>
-                {% for post in posts %}
+                {% for image in images %}
                 <tr>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <form action="/user/editpost" method="post">
-                        <td><button class="btn btn-warning" name="media_id" value="">Edit</button></td>
+                    <td><input type="checkbox" class="checkbox" name="checkbox[]" value="{{ image.path }}"></td>
+        </form>
+                    <td><img width="50px" src="/img/posts/{{ image.path }}"/></td>
+                    <td>{{ image.path }}</td>
+                    {% if image.used == 1 %}
+                        <td>Yes</td>
+                    {% else %}
+                        <td>No</td>
+                    {% endif %}
+                    <form action="/admin/deleteimage" method="post">
+                        <td><button class="btn btn-danger" name="image_name" value="{{ image.path }}">Delete</button></td>
                     </form>
                 </tr>
                 </tbody>
                 {% endfor %}
             </table>
         {% else %}
-            <h3>There are no posts for this user</h3>
+            <h3>There are no images for display</h3>
         {% endif %}
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        $(document).ready(function() {
+
+            $('#chkbox').on('click', function() {
+                if($('#chkbox').prop('checked') == true) {
+                    $('.checkbox').prop('checked', true);
+                } else {
+                    $('.checkbox').prop('checked', false);
+                }
+            });
+
+        });
+    </script>
 {% endblock %}

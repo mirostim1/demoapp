@@ -30,7 +30,7 @@ use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 class UserController extends AbstractController
 {
     /**
-    * @Route("/user/", name="user")
+    * @Route("/", name="user")
     */
     public function index(Request $request)
     {
@@ -275,7 +275,8 @@ class UserController extends AbstractController
             [
                 'controller_name' => 'UserController',
                 'posts' => $posts
-            ]);
+            ]
+        );
     }
 
     /**
@@ -294,8 +295,6 @@ class UserController extends AbstractController
         foreach($categories as $category) {
             array_push($cats, [$category->getName() => $category->getId()]);
         }
-
-        //var_dump($cats['data']); die();
 
         $post = new Post();
 
@@ -318,11 +317,11 @@ class UserController extends AbstractController
             ))
             ->add('category_id', ChoiceType::class, array(
                 'choices' =>  $cats,
-                'label' => 'Select Category',
+                'label' => 'Select Category *',
                 'attr' => ['class' => 'form-control']
             ))
             ->add('register', SubmitType::class, array(
-                'label' => 'Save',
+                'label' => 'Submit',
                 'attr' => ['class' => 'form-control btn btn-success']
             ))
             ->getForm();
@@ -330,8 +329,7 @@ class UserController extends AbstractController
         $form->handleRequest($request);
 
         if($form->isSubmitted() && $form->isValid()) {
-            $post = $form->getData();
-            //var_dump($post); die();
+            $form->getData();
 
             $entityManager = $this->getDoctrine()->getManager();
 
@@ -343,13 +341,17 @@ class UserController extends AbstractController
             $post->setEditedAt($date);
             $post->setUserId($session->get('user_id'));
 
-            $newFileName = 'image' . time();
-            $file = $form['image_path']->getData();
-            $extension = $file->guessExtension();
-            if($file->move('img/posts', $newFileName . '.' . $extension)) {
-                $post->setImagePath($newFileName . '.' . $extension);
-            } else {
-                $post->setImagePath(null);
+            if($post->getImagePath() != null) {
+                $newFileName = 'image' . time();
+                $file = $form['image_path']->getData();
+                $extension = $file->guessExtension();
+
+                if($file->move('img/posts', $newFileName . '.' . $extension)) {
+                    $post->setImagePath($newFileName . '.' . $extension);
+                }
+            }
+            else {
+                $post->setImagePath('');
             }
 
             $entityManager->persist($post);
@@ -438,12 +440,22 @@ class UserController extends AbstractController
             $editPost->setEditedAt($date);
             $editPost->setUserId($session->get('user_id'));
 
+            if($post['image_path'] != null) {
+                $newFileName = 'image' . time();
+                $file = $form['image_path']->getData();
+                $extension = $file->guessExtension();
+
+                if($file->move('img/posts', $newFileName . '.' . $extension)) {
+                    $editPost->setImagePath($newFileName . '.' . $extension);
+                }
+            }
+
             try {
                 $entityManager->flush();
-                $this->addFlash('success', 'Successfully edited');
+                $this->addFlash('success', 'Post has been successfully edited');
                 return $this->redirectToRoute('user_posts');
             } catch(\Exception $e) {
-                $this->addFlash('error', 'Error during editing');
+                $this->addFlash('error', 'Error during editing post');
                 return $this->redirectToRoute('user_edit_post');
             }
         }
@@ -473,7 +485,6 @@ class UserController extends AbstractController
 
         try {
             $entityManager->flush();
-
             $fileSystem = new Filesystem();
             $filename = 'img/posts/' . $post->getImagePath();
             $fileSystem->remove($filename);

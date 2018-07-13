@@ -23,6 +23,7 @@
         {% if posts|length > 0 %}
             <table class="table table-striped">
                 <thead>
+                    <th>Image</th>
                     <th>Title</th>
                     <th>Content</th>
                     <th>Created At</th>
@@ -32,6 +33,15 @@
                 <tbody>
                 {% for post in posts %}
                     <tr>
+                        {% if post.image_path != '' %}
+                            <td>
+                                <img width="50px" src="/img/posts/{{ post.image_path }}"/>
+                            </td>
+                        {% else %}
+                            <td>
+                                <img width="50px" src="{{ asset('img/placeholder.png') }}"/>
+                            </td>
+                        {% endif %}
                         <td>{{ post.title }}</td>
                         <td>{{ post.content }}</td>
                         <td>{{ post.created_at|date('d/m/Y H:i') }}</td>

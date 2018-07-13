@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
 use App\Entity\User;
 use App\Entity\Post;
-use App\Form\Login;
+use Symfony\Component\Filesystem\Filesystem;
 
 class AdminController extends AbstractController
 {
@@ -110,7 +110,8 @@ class AdminController extends AbstractController
                 'attr' => ['class' => 'form-control']
             ))
             ->add('image_path', FileType::class, array(
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control'],
+                'data_class' => null
             ))
             ->add('id', HiddenType::class, array(
                 'attr' => ['class' => 'form-control']
@@ -130,7 +131,6 @@ class AdminController extends AbstractController
 
         if($form->isSubmitted() && $form->isValid()) {
             $post = $form->getData();
-            //var_dump($post); die();
 
             $entityManager = $this->getDoctrine()->getManager();
 
@@ -141,12 +141,22 @@ class AdminController extends AbstractController
             $date = new \DateTime();
             $editPost->setEditedAt($date);
 
+            if($post['image_path'] != null) {
+                $newFileName = 'image' . time();
+                $file = $form['image_path']->getData();
+                $extension = $file->guessExtension();
+
+                if($file->move('img/posts', $newFileName . '.' . $extension)) {
+                    $editPost->setImagePath($newFileName . '.' . $extension);
+                }
+            }
+
             try {
                 $entityManager->flush();
-                $this->addFlash('success', 'Successfully edited');
+                $this->addFlash('success', 'Post has been successfully edited');
                 return $this->redirectToRoute('admin_posts');
             } catch(\Exception $e) {
-                $this->addFlash('error', 'Error during editing');
+                $this->addFlash('error', 'Error during editing post');
                 return $this->redirectToRoute('admin_edit_post');
             }
         }
@@ -210,6 +220,7 @@ class AdminController extends AbstractController
 
         if($form->isSubmitted() && $form->isValid()) {
             $post = $form->getData();
+            //var_dump($post); die();
 
             $entityManager = $this->getDoctrine()->getManager();
 
@@ -222,15 +233,27 @@ class AdminController extends AbstractController
             $newPost->setEditedAt($date);
             $newPost->setUserId($session->get('user_id'));
 
+            if($post->getImagePath() != null) {
+                $newFileName = 'image' . time();
+                $file = $form['image_path']->getData();
+                $extension = $file->guessExtension();
+
+                if($file->move('img/posts', $newFileName . '.' . $extension)) {
+                    $post->setImagePath($newFileName . '.' . $extension);
+                }
+            } else {
+                //$post->setImagePath('');
+            }
+
             $entityManager->persist($newPost);
 
             try {
                 $entityManager->flush();
-                $this->addFlash('success', 'New post saved');
-                return $this->redirectToRoute('user_posts');
+                $this->addFlash('success', 'New post has been successfully submitted');
+                return $this->redirectToRoute('admin_posts');
             } catch(\Exception $e) {
-                $this->addFlash('error', 'Error during saving');
-                return $this->redirectToRoute('user_add_new_post');
+                $this->addFlash('error', 'Error during saving post. Please try again.');
+                return $this->redirectToRoute('admin_add_new_post');
             }
         }
 
@@ -259,6 +282,9 @@ class AdminController extends AbstractController
 
         try {
             $entityManager->flush();
+            $fileSystem = new Filesystem();
+            $filename = 'img/posts/' . $post->getImagePath();
+            $fileSystem->remove($filename);
             $this->addFlash('success', 'Post has been succesfully deleted');
         } catch(\Exception $e) {
             $this->addFlash('error', 'Error while deleting post');
@@ -322,12 +348,11 @@ class AdminController extends AbstractController
 
             $entityManager = $this->getDoctrine()->getManager();
 
-            $newUser = new User();
-            $newUser->setEmail($user->getEmail());
-            $newUser->setPassword($user->getPassword());
-            $newUser->setIsAdmin($user->getIsAdmin());
+            $user->setEmail($user->getEmail());
+            $user->setPassword($user->getPassword());
+            $user->setIsAdmin($user->getIsAdmin());
 
-            $entityManager->persist($newUser);
+            $entityManager->persist($user);
 
             try {
                 $entityManager->flush();
@@ -441,19 +466,122 @@ class AdminController extends AbstractController
     public function allmedia()
     {
         $repository = $this->getDoctrine()->getRepository(Post::class);
+        $posts = $repository->findAll();
 
-        $session = new Session();
+        $temp = [];
+        foreach($posts as $post) {
+            if($post->image_path) {
+                array_push($temp, $post->image_path);
+            }
+        }
 
-        $posts = $repository->findBy([
-            'user_id' => $session->get('user_id')
-        ]);
+        $files = scandir('img/posts');
+
+        $imagesInDir = [];
+        $flag = 0;
+        foreach($files as $key => $image) {
+            if($key > 1) {
+                foreach($temp as $item) {
+                    if($image == $item) {
+                        $flag = 1;
+                    }
+                }
+                if($flag == 1) {
+                    array_push($imagesInDir, ['path' => $image, 'used' => 1]);
+                    $flag = 0;
+                } else {
+                    array_push($imagesInDir, ['path' => $image, 'used' => 0]);
+                }
+            }
+        }
 
         return $this->render('admin/allmedia.html.twig',
             [
                 'controller_name' => 'AdminController',
-                'posts' => $posts
+                'images' => $imagesInDir
             ]
         );
+    }
+
+    /**
+     * @Route("/admin/deleteimage", name="admin_delete_image")
+     */
+    public function deleteImage(Request $request)
+    {
+        $image = $request->request->get('image_name');
+
+        $imagePath = 'img/posts/' . $image;
+
+        if(file_exists($imagePath)) {
+            $fileSystem = new Filesystem();
+
+            try {
+                $repository = $this->getDoctrine()->getRepository(Post::class);
+                $entityManager = $this->getDoctrine()->getManager();
+
+                $post = $repository->findOneBy([
+                    'image_path' => $image
+                ]);
+
+                if($post) {
+                    if($post->image_path == $image) {
+                        $post->setImagePath('');
+                        $entityManager->flush();
+                    }
+                }
+
+                $fileSystem->remove($imagePath);
+
+                $this->addFlash('success', 'Image has been successfully deleted');
+            } catch(\Exception $e) {
+                $this->addFlash('error', 'Error during delete image');
+            }
+        } else {
+            $this->addFlash('error', 'Selected file not exsits');
+        }
+
+        return $this->redirectToRoute('admin_media');
+    }
+
+    /**
+     * @Route("/admin/deleteimages", name="admin_delete_images")
+     */
+    public function deleteImages(Request $request)
+    {
+        $images = $request->request->get('checkbox');
+
+        $repository = $this->getDoctrine()->getRepository(Post::class);
+        $entityManager = $this->getDoctrine()->getManager();
+        $fileSystem = new Filesystem();
+
+        foreach($images as $image) {
+            $imagePath = 'img/posts/' . $image;
+
+            if(file_exists($imagePath)) {
+                try {
+                    $post = $repository->findOneBy([
+                        'image_path' => $image
+                    ]);
+
+                    if($post) {
+                        if($post->image_path == $image) {
+                            $post->setImagePath('');
+                            $entityManager->flush();
+                        }
+                    }
+                    $fileSystem->remove($imagePath);
+                    $msg = 'Selected images have been successfully deleted';
+                } catch(\Exception $e) {
+                    $this->addFlash('error', 'Error during delete selected images');
+                }
+            }
+        }
+
+        if($msg) {
+            $this->addFlash('success', $msg);
+        }
+
+        return $this->redirectToRoute('admin_media');
     }
 
     /**

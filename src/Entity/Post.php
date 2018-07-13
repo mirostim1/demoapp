@@ -33,6 +33,8 @@ class Post
 
     /**
      * @ORM\Column(type="integer")
+     * @Assert\NotBlank()
+     * @Assert\GreaterThan(0)
      */
     private $category_id;
 
@@ -52,9 +54,14 @@ class Post
     private $user_id;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="string", length=255, nullable=true)
+     * @Assert\File(
+     *     maxSize = "3072k",
+     *     mimeTypes = {"image/jpg", "image/png"},
+     *     mimeTypesMessage = "Please upload a valid image file"
+     * )
      */
-    private $image_path;
+    public $image_path;
 
     public function getId()
     {
