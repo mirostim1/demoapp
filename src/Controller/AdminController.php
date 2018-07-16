@@ -18,7 +18,6 @@ use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -88,12 +87,18 @@ class AdminController extends AbstractController
 //                    ->from('App\Entity\Post', 'p');
 
         $currentPage = $request->query->get('page');
+
         if(!$currentPage) {
             $currentPage = 1;
         }
 
         $adapter = new ArrayAdapter($posts);
         $pagerfanta = new Pagerfanta($adapter);
+
+        if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
+            return $this->redirect('/admin/allposts', 302);
+        }
+
         $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
 
         return $this->render('admin/allposts.html.twig',
@@ -348,6 +353,11 @@ class AdminController extends AbstractController
 
         $adapter = new ArrayAdapter($users);
         $pagerfanta = new Pagerfanta($adapter);
+
+        if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
+            return $this->redirect('/admin/allusers', 302);
+        }
+
         $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
 
         return $this->render('admin/allusers.html.twig',
@@ -547,6 +557,11 @@ class AdminController extends AbstractController
 
         $adapter = new ArrayAdapter($imagesInDir);
         $pagerfanta = new Pagerfanta($adapter);
+
+        if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
+            return $this->redirect('/admin/allmedia', 302);
+        }
+
         $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
 
         return $this->render('admin/allmedia.html.twig',
@@ -604,35 +619,37 @@ class AdminController extends AbstractController
     {
         $images = $request->request->get('checkbox');
 
-        $repository = $this->getDoctrine()->getRepository(Post::class);
-        $entityManager = $this->getDoctrine()->getManager();
-        $fileSystem = new Filesystem();
+        if($images) {
+            $repository = $this->getDoctrine()->getRepository(Post::class);
+            $entityManager = $this->getDoctrine()->getManager();
+            $fileSystem = new Filesystem();
 
-        foreach($images as $image) {
-            $imagePath = 'img/posts/' . $image;
+            foreach($images as $image) {
+                $imagePath = 'img/posts/' . $image;
 
-            if(file_exists($imagePath)) {
-                try {
-                    $post = $repository->findOneBy([
-                        'image_path' => $image
-                    ]);
+                if(file_exists($imagePath)) {
+                    try {
+                        $post = $repository->findOneBy([
+                            'image_path' => $image
+                        ]);
 
-                    if($post) {
-                        if($post->image_path == $image) {
-                            $post->setImagePath('');
-                            $entityManager->flush();
+                        if($post) {
+                            if($post->image_path == $image) {
+                                $post->setImagePath('');
+                                $entityManager->flush();
+                            }
                         }
+                        $fileSystem->remove($imagePath);
+                        $msg = 'Selected images have been successfully deleted';
+                    } catch(\Exception $e) {
+                        $this->addFlash('error', 'Error during delete selected images');
                     }
-                    $fileSystem->remove($imagePath);
-                    $msg = 'Selected images have been successfully deleted';
-                } catch(\Exception $e) {
-                    $this->addFlash('error', 'Error during delete selected images');
                 }
             }
-        }
 
-        if($msg) {
-            $this->addFlash('success', $msg);
+            if($msg) {
+                $this->addFlash('success', $msg);
+            }
         }
 
         return $this->redirectToRoute('admin_media');
@@ -713,22 +730,5 @@ class AdminController extends AbstractController
         }
 
         return $this->redirectToRoute('admin_categories');
-    }
-
-    /**
-     * @Route("/admin/logout", name="admin_logout")
-     */
-    public function logout()
-    {
-        $session = new Session();
-
-        $session->remove('logged_in');
-        $session->remove('is_admin');
-        $session->remove('email');
-        $session->remove('user_id');
-
-        $this->addFlash('success', 'Successfully logout');
-
-        return $this->redirectToRoute('user');
     }
 }

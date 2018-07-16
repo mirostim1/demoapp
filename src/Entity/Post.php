@@ -39,7 +39,7 @@ class Post
      *     message = "This value must not be blank"
      * )
      */
-    private $category_id;
+    public $category_id;
 
     /**
      * @ORM\Column(type="datetime")
@@ -54,7 +54,7 @@ class Post
     /**
      * @ORM\Column(type="integer")
      */
-    private $user_id;
+    public $user_id;
 
     /**
      * @ORM\Column(type="string", length=255, nullable=true)

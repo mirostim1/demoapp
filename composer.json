@@ -16,6 +16,7 @@
         "symfony/orm-pack": "^1.0",
         "symfony/process": "^3.4",
         "symfony/security-bundle": "^3.4",
+        "symfony/security-csrf": "^3.4",
         "symfony/serializer-pack": "*",
         "symfony/swiftmailer-bundle": "^3.1",
         "symfony/twig-bundle": "^3.4",

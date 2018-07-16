@@ -24,9 +24,12 @@
         {% if my_pager|length > 0 %}
             <table class="table table-striped">
                 <thead>
+                    <th>#</th>
                     <th>Image</th>
                     <th>Title</th>
                     <th>Content</th>
+                    <th>Category</th>
+                    <th>Owner</th>
                     <th>Created At</th>
                     <th>Edited At</th>
                     <th>Action</th>
@@ -35,6 +38,7 @@
 
                 {% for post in my_pager.currentPageResults %}
                     <tr>
+                        <td>{{ post.id }}</td>
                         {% if post.image_path != '' %}
                             <td>
                                 <img width="50px" src="/img/posts/{{ post.image_path }}"/>
@@ -46,6 +50,8 @@
                         {% endif %}
                         <td>{{ post.title }}</td>
                         <td>{{ post.content|length > 10 ? post.content|slice(0, 10) ~ '...' : post.content }}</td>
+                        <td>{{ post.category_id }}</td>
+                        <td>{{ post.user_id }}</td>
                         <td>{{ post.created_at|date('d/m/Y H:i') }}</td>
                         <td>{{ post.edited_at|date('d/m/Y H:i') }}</td>
                         <form action="/admin/editpost" method="post">

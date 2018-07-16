@@ -9,7 +9,7 @@
 
         {% if my_pager|length > 0 %}
             <form action="/admin/deleteimages" method="post">
-                <button type="submit" class="btn btn-warning pull-right">Delete selected</button>
+                <button type="submit" id="delsel" class="btn btn-warning pull-right">Delete selected</button>
         {% endif %}
 
         <br><br>
@@ -68,15 +68,15 @@
 {% block javascripts %}
     <script>
 
-        var $j = jQuery.noConflict();
+        // var $j = jQuery.noConflict();
 
-        $j(document).ready(function() {
+        $(document).ready(function() {
 
-            $j('#chkbox').on('click', function() {
-                if($j('#chkbox').prop('checked') == true) {
-                    $j('.checkbox').prop('checked', true);
+            $('#chkbox').on('click', function() {
+                if($('#chkbox').prop('checked') == true) {
+                    $('.checkbox').prop('checked', true);
                 } else {
-                    $j('.checkbox').prop('checked', false);
+                    $('.checkbox').prop('checked', false);
                 }
             });
 

@@ -31,80 +31,26 @@ use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 class UserController extends AbstractController
 {
     /**
-    * @Route("/", name="user")
-    */
-    public function index(Request $request, UserPasswordEncoderInterface $passwordEncoder)
-    {
-        $user = new User();
-
-        $form = $this->createFormBuilder($user)
-            ->add('email', EmailType::class, array(
-                'label' => 'Enter Email *',
-                'attr' => ['class' => 'form-control', 'id' => 'dist']
-            ))
-            ->add('password', PasswordType::class, array(
-                'label' => 'Enter Password *',
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('login', SubmitType::class, array(
-                'label' => 'Login',
-                'attr' => ['class' => 'form-control btn btn-success']
-            ))
-            ->getForm();
-
-        $form->handleRequest($request);
-
-        if($form->isSubmitted() /* && $form->isValid()*/) {
-            $user = $form->getData();
-
-            $repository = $this->getDoctrine()->getRepository(User::class);
-
-            $check = $repository->findOneBy([
-                'email' => $user->getEmail()
-            ]);
-
-            if($check) {
-                $session = new Session();
-                $session->set('logged_in', 1);
-                $session->set('email', $check->getEmail());
-                $session->set('is_admin', $check->getIsAdmin());
-                $session->set('user_id', $check->getId());
-
-                if($check->getIsAdmin() == 1) {
-                    return $this->redirectToRoute('admin_profile');
-                } else {
-                    return $this->redirectToRoute('user_profile');
-                }
-            } else {
-                $this->addFlash('error', 'Wrong credentials');
-                return $this->redirectToRoute('user');
-            }
-        }
-
-        return $this->render('user/index.html.twig', [
-            'form' => $form->createView()
-        ]);
-    }
-
-    /**
      * @Route("/user/profile", name="user_profile")
      */
-    public function login(Request $request, SessionInterface $session)
+    public function profile(Request $request, SessionInterface $session)
     {
-        $session = new Session();
+        $user = $this->getUser();
 
-        if($session->get('is_admin') == 1) {
+        $role = $user->getRoles();
+
+        if($role[0] == 'ROLE_ADMIN') {
             $isAdmin = 'Yes';
         } else {
             $isAdmin = 'No';
         }
 
-        $userId = $session->get('user_id');
+        $userId = $user->getId();
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
 
         $posts = $repository->findBy([
-            'user_id' => $userId
+            'user_id' => $userId,
         ]);
 
         $nrPosts = count($posts);
@@ -112,7 +58,7 @@ class UserController extends AbstractController
         return $this->render('user/profile.html.twig',
             [
                 'controller_name' => 'UserController',
-                'email' => $session->get('email'),
+                'email' => $user->getEmail(),
                 'is_admin' => $isAdmin,
                 'nr_posts' => $nrPosts
             ]
@@ -122,7 +68,7 @@ class UserController extends AbstractController
     /**
      * @Route("/user/newpass", name="user_new_password")
      */
-    public function newPassword(Request $request)
+    public function newPassword(Request $request, UserPasswordEncoderInterface $passwordEncoder)
     {
         $user = new User();
 
@@ -134,7 +80,7 @@ class UserController extends AbstractController
             ->add('password', RepeatedType::class, array(
                 'type' => PasswordType::class,
                 'first_options'  => array(
-                    'label' => 'Password *',
+                    'label' => 'New Password *',
                     'attr' => ['class' => 'form-control']
                 ),
                 'second_options' => array(
@@ -163,10 +109,10 @@ class UserController extends AbstractController
                 'id' => $userId
             ]);
 
-            $entityManager = $this->getDoctrine()->getManager();
+            if($data->getEmail() == $newPass->getEmail()) {
+                $entityManager = $this->getDoctrine()->getManager();
 
-            if($newPass->getEmail() == $data->getEmail()) {
-                $newPass->setPassword($data->getPassword());
+                $newPass->setPassword($passwordEncoder->encodePassword($user, $data->getPassword()));
 
                 $entityManager->persist($newPass);
 
@@ -190,69 +136,7 @@ class UserController extends AbstractController
             ]
         );
     }
-
-    /**
-     * @Route("/user/register", name="user_register")
-     */
-    public function register(Request $request, UserPasswordEncoderInterface $passwordEncoder)
-    {
-        $user = new User();
-
-        $form = $this->createFormBuilder($user)
-            ->add('email', EmailType::class, array(
-                'label' => 'Enter Email *',
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('password', RepeatedType::class, array(
-                'type' => PasswordType::class,
-                'first_options'  => array(
-                    'label' => 'Password *',
-                    'attr' => ['class' => 'form-control']
-                ),
-                'second_options' => array(
-                    'label' => 'Repeat Password *',
-                    'attr' => ['class' => 'form-control']
-                ),
-                'invalid_message' => 'The password fields must match.'
-            ))
-            ->add('register', SubmitType::class, array(
-                'label' => 'Register',
-                'attr' => ['class' => 'form-control btn btn-success']
-            ))
-            ->getForm();
-
-        $form->handleRequest($request);
-
-        if($form->isSubmitted() && $form->isValid()) {
-            $userData = $form->getData();
-
-            $entityManager = $this->getDoctrine()->getManager();
-
-            $user->setEmail($userData->getEmail());
-
-            $password = $passwordEncoder->encodePassword($user, $userData->getPlainPassword());
-            $string = 'hello';
-            $salt = md5($string);
-            $user->setPassword($password.$salt);
-            $user->setIsAdmin(0);
-
-            $entityManager->persist($user);
-
-            try {
-                $entityManager->flush();
-                $this->addFlash('success', 'User registrated! You can login now.');
-                return $this->redirectToRoute('user');
-            } catch(\Exception $e) {
-                $this->addFlash('error', 'Error happened during persist to DB.');
-                return $this->redirectToRoute('user_register');
-            }
-        }
-
-        return $this->render('user/register.html.twig', [
-            'form' => $form->createView()
-        ]);
-    }
-
+    
     /**
      * @Route("/user/posts", name="user_posts")
      */
@@ -274,6 +158,11 @@ class UserController extends AbstractController
 
         $adapter = new ArrayAdapter($posts);
         $pagerfanta = new Pagerfanta($adapter);
+
+        if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
+            return $this->redirect('/user/posts', 302);
+        }
+
         $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
 
         return $this->render('user/posts.html.twig',
@@ -511,22 +400,5 @@ class UserController extends AbstractController
         }
 
         return $this->redirectToRoute('user_posts');
-    }
-
-    /**
-     * @Route("/user/logout", name="user_logout")
-     */
-    public function logout()
-    {
-        $session = new Session();
-
-        $session->remove('logged_in');
-        $session->remove('is_admin');
-        $session->remove('email');
-        $session->remove('user_id');
-
-        $this->addFlash('success', 'Successfully logout');
-
-        return $this->redirectToRoute('user');
     }
 }
