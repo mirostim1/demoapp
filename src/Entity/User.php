@@ -9,56 +9,87 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\UserRepository")
+ * @UniqueEntity("email")
  */
-class User
+class User implements UserInterface
 {
     /**
-     * @ORM\Id()
-     * @ORM\GeneratedValue()
+     * @ORM\Id
      * @ORM\Column(type="integer")
+     * @ORM\GeneratedValue(strategy="AUTO")
      */
     private $id;
 
     /**
-     * @var string $email
-     *
-     * @ORM\Column(type="string", length=100)
-     * @Assert\Email()
+     * @ORM\Column(type="string", length=255)
      * @Assert\NotBlank()
+     * @Assert\Email()
      */
     private $email;
 
     /**
-     * @ORM\Column(type="string", length=100)
-     * @Assert\NotBlank()
-     * @Assert\Length(
-     *     min = 2,
-     *     max = 50
-     * )
+     * @ORM\Column(type="string", length=255)
+     */
+    private $username;
+
+    /**
+     * @Assert\Length(max=4096)
+     */
+    private $plainPassword;
+
+    /**
+     * The below length depends on the "algorithm" you use for encoding
+     * the password, but this works well with bcrypt.
+     *
+     * @ORM\Column(type="string", length=255)
      */
     private $password;
 
     /**
+     * @ORM\Column(type="array")
+     */
+    private $roles;
+
+    /**
      * @ORM\Column(type="boolean")
-     * @Assert\Choice({0, 1})
      */
     public $is_admin;
 
-    public function getId()
+    public function __construct()
     {
-        return $this->id;
+        $this->roles = array('ROLE_USER');
     }
+
+    // other properties and methods
 
     public function getEmail()
     {
         return $this->email;
     }
 
-    public function setEmail(string $email): self
+    public function setEmail($email)
     {
         $this->email = $email;
+    }
 
-        return $this;
+    public function getUsername()
+    {
+        return $this->username;
+    }
+
+    public function setUsername($username)
+    {
+        $this->username = $username;
+    }
+
+    public function getPlainPassword()
+    {
+        return $this->plainPassword;
+    }
+
+    public function setPlainPassword($password)
+    {
+        $this->plainPassword = $password;
     }
 
     public function getPassword()
@@ -66,11 +97,9 @@ class User
         return $this->password;
     }
 
-    public function setPassword(string $password): self
+    public function setPassword($password)
     {
         $this->password = $password;
-
-        return $this;
     }
 
     public function getIsAdmin()
@@ -78,9 +107,35 @@ class User
         return $this->is_admin;
     }
 
-    public function setIsAdmin(bool $is_admin): self
+    public function setIsAdmin($is_admin)
     {
         $this->is_admin = $is_admin;
+    }
+
+    public function getSalt()
+    {
+        // The bcrypt and argon2i algorithms don't require a separate salt.
+        // You *may* need a real salt if you choose a different encoder.
+        return null;
+    }
+
+    public function getRoles()
+    {
+        return $this->roles;
+    }
+
+    public function eraseCredentials()
+    {
+    }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function setRoles(array $roles): self
+    {
+        $this->roles = $roles;
 
         return $this;
     }

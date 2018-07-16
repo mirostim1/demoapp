@@ -23,6 +23,4 @@ security:
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
     encoders:
-            App\Entity\User:
-                algorithm: bcrypt
-                cost:      15
+        App\Entity\User: bcrypt

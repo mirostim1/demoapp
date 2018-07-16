@@ -21,7 +21,7 @@
             </div>
         {% endfor %}
 
-        {% if posts|length > 0 %}
+        {% if my_pager|length > 0 %}
             <table class="table table-striped">
                 <thead>
                     <th>Image</th>
@@ -32,28 +32,34 @@
                     <th>Action</th>
                 </thead>
                 <tbody>
-                {% for post in posts %}
-                <tr>
-                    {% if post.image_path != '' %}
-                        <td>
-                            <img width="50px" src="/img/posts/{{ post.image_path }}"/>
-                        </td>
-                    {% else %}
-                        <td>
-                            <img width="50px" src="{{ asset('img/placeholder.png') }}"/>
-                        </td>
-                    {% endif %}
-                    <td>{{ post.title }}</td>
-                    <td>{{ post.content|length > 10 ? post.content|slice(0, 10) ~ '...' : post.content }}</td>
-                    <td>{{ post.created_at|date('d/m/Y H:i') }}</td>
-                    <td>{{ post.edited_at|date('d/m/Y H:i') }}</td>
-                    <form action="/admin/editpost" method="post">
-                        <td><button class="btn btn-warning" name="post_id" value="{{ post.id }}">Edit</button></td>
-                    </form>
-                </tr>
-                </tbody>
+
+                {% for post in my_pager.currentPageResults %}
+                    <tr>
+                        {% if post.image_path != '' %}
+                            <td>
+                                <img width="50px" src="/img/posts/{{ post.image_path }}"/>
+                            </td>
+                        {% else %}
+                            <td>
+                                <img width="50px" src="{{ asset('img/placeholder.png') }}"/>
+                            </td>
+                        {% endif %}
+                        <td>{{ post.title }}</td>
+                        <td>{{ post.content|length > 10 ? post.content|slice(0, 10) ~ '...' : post.content }}</td>
+                        <td>{{ post.created_at|date('d/m/Y H:i') }}</td>
+                        <td>{{ post.edited_at|date('d/m/Y H:i') }}</td>
+                        <form action="/admin/editpost" method="post">
+                            <td><button class="btn btn-warning" name="post_id" value="{{ post.id }}">Edit</button></td>
+                        </form>
+                    </tr>
                 {% endfor %}
+
             </table>
+
+            <div class="pagerfanta text-center">
+                {{ pagerfanta(my_pager, 'twitter_bootstrap3', { 'omitFirstPage': true}) }}
+            </div>
+
         {% else %}
             <h3>There are no posts for this user</h3>
         {% endif %}

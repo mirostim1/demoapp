@@ -3,6 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\Category;
+use Pagerfanta\Adapter\DoctrineORMAdapter;
+use Pagerfanta\Pagerfanta;
+use Pagerfanta\Adapter\ArrayAdapter;
+use Pagerfanta\View\TwitterBootstrap3View;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
@@ -25,6 +29,16 @@ use Symfony\Component\Filesystem\Filesystem;
 
 class AdminController extends AbstractController
 {
+
+    public function __construct()
+    {
+        $session = new Session();
+
+        if($session->get('is_admin') != 1) {
+            return $this->redirect('/');
+        }
+    }
+
     /**
      * @Route("/admin/profile", name="admin_profile")
      */
@@ -61,19 +75,31 @@ class AdminController extends AbstractController
     /**
      * @Route("/admin/allposts", name="admin_posts")
      */
-    public function allposts()
+    public function allposts(Request $request)
     {
         $repository = $this->getDoctrine()->getRepository(Post::class);
-
-        $session = new Session();
-
         $posts = $repository->findAll();
         rsort($posts);
+
+        //$entityManager = $this->getDoctrine()->getManager();
+
+//        $queryBuilder = $entityManager->createQueryBuilder()
+//                    ->select('p')
+//                    ->from('App\Entity\Post', 'p');
+
+        $currentPage = $request->query->get('page');
+        if(!$currentPage) {
+            $currentPage = 1;
+        }
+
+        $adapter = new ArrayAdapter($posts);
+        $pagerfanta = new Pagerfanta($adapter);
+        $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
 
         return $this->render('admin/allposts.html.twig',
             [
                 'controller_name' => 'AdminController',
-                'posts' => $posts
+                'my_pager' => $pagerfanta,
             ]);
     }
 
@@ -87,10 +113,14 @@ class AdminController extends AbstractController
         $repository = $this->getDoctrine()->getRepository(Category::class);
         $categories = $repository->findAll();
 
-        $cats = [0 => null];
+        $categoriesTemp = [0 => ''];
+        $categoriesIds = [0 => 0];
         foreach($categories as $category) {
-            array_push($cats, [$category->getName() => $category->getId()]);
+            array_push($categoriesTemp, $category->getName());
+            array_push($categoriesIds, $category->getId());
         }
+
+        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
 
@@ -117,7 +147,7 @@ class AdminController extends AbstractController
                 'attr' => ['class' => 'form-control']
             ))
             ->add('category_id', ChoiceType::class, array(
-                'choices' =>  $cats,
+                'choices' =>  $categoriesDropdown,
                 'label' => 'Select Category',
                 'attr' => ['class' => 'form-control']
             ))
@@ -178,13 +208,16 @@ class AdminController extends AbstractController
         $userId = $session->get('user_id');
 
         $repository = $this->getDoctrine()->getRepository(Category::class);
-
         $categories = $repository->findAll();
 
-        $cats = [0 => null];
+        $categoriesTemp = [0 => ''];
+        $categoriesIds = [0 => 0];
         foreach($categories as $category) {
-            array_push($cats, [$category->getName() => $category->getId()]);
+            array_push($categoriesTemp, $category->getName());
+            array_push($categoriesIds, $category->getId());
         }
+
+        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $post = new Post();
 
@@ -206,8 +239,8 @@ class AdminController extends AbstractController
                 'attr' => ['class' => 'form-control']
             ))
             ->add('category_id', ChoiceType::class, array(
-                'choices' =>  $cats,
-                'label' => 'Select Category',
+                'choices' =>  $categoriesDropdown,
+                'label' => 'Select Category *',
                 'attr' => ['class' => 'form-control']
             ))
             ->add('register', SubmitType::class, array(
@@ -220,18 +253,16 @@ class AdminController extends AbstractController
 
         if($form->isSubmitted() && $form->isValid()) {
             $post = $form->getData();
-            //var_dump($post); die();
 
             $entityManager = $this->getDoctrine()->getManager();
 
-            $newPost = new Post();
-            $newPost->setTitle($post->getTitle());
-            $newPost->setContent($post->getContent());
-            $newPost->setCategoryId($post->getCategoryId());
+            $post->setTitle($post->getTitle());
+            $post->setContent($post->getContent());
+            $post->setCategoryId($post->getCategoryId());
             $date = new \DateTime();
-            $newPost->setCreatedAt($date);
-            $newPost->setEditedAt($date);
-            $newPost->setUserId($session->get('user_id'));
+            $post->setCreatedAt($date);
+            $post->setEditedAt($date);
+            $post->setUserId($session->get('user_id'));
 
             if($post->getImagePath() != null) {
                 $newFileName = 'image' . time();
@@ -242,10 +273,10 @@ class AdminController extends AbstractController
                     $post->setImagePath($newFileName . '.' . $extension);
                 }
             } else {
-                //$post->setImagePath('');
+                $post->setImagePath('');
             }
 
-            $entityManager->persist($newPost);
+            $entityManager->persist($post);
 
             try {
                 $entityManager->flush();
@@ -273,18 +304,23 @@ class AdminController extends AbstractController
         $postId = $request->request->get('post_id');
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
-
-        $entityManager = $this->getDoctrine()->getManager();
-
         $post = $repository->find($postId);
 
+        if($post->getImagePath()) {
+            $filename = 'img/posts/' . $post->getImagePath();
+        }
+
+        $entityManager = $this->getDoctrine()->getManager();
         $entityManager->remove($post);
 
         try {
             $entityManager->flush();
             $fileSystem = new Filesystem();
-            $filename = 'img/posts/' . $post->getImagePath();
-            $fileSystem->remove($filename);
+
+            if($filename) {
+                $fileSystem->remove($filename);
+            }
+
             $this->addFlash('success', 'Post has been succesfully deleted');
         } catch(\Exception $e) {
             $this->addFlash('error', 'Error while deleting post');
@@ -296,7 +332,7 @@ class AdminController extends AbstractController
     /**
      * @Route("/admin/allusers", name="admin_users")
      */
-    public function allusers()
+    public function allusers(Request $request)
     {
         $repository = $this->getDoctrine()->getRepository(User::class);
 
@@ -305,10 +341,19 @@ class AdminController extends AbstractController
         $users = $repository->findAll();
         rsort($users);
 
+        $currentPage = $request->query->get('page');
+        if(!$currentPage) {
+            $currentPage = 1;
+        }
+
+        $adapter = new ArrayAdapter($users);
+        $pagerfanta = new Pagerfanta($adapter);
+        $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
+
         return $this->render('admin/allusers.html.twig',
             [
                 'controller_name' => 'AdminController',
-                'users' => $users
+                'my_pager' => $pagerfanta
             ]
         );
     }
@@ -463,7 +508,7 @@ class AdminController extends AbstractController
     /**
      * @Route("/admin/allmedia", name="admin_media")
      */
-    public function allmedia()
+    public function allmedia(Request $request)
     {
         $repository = $this->getDoctrine()->getRepository(Post::class);
         $posts = $repository->findAll();
@@ -495,10 +540,19 @@ class AdminController extends AbstractController
             }
         }
 
+        $currentPage = $request->query->get('page');
+        if(!$currentPage) {
+            $currentPage = 1;
+        }
+
+        $adapter = new ArrayAdapter($imagesInDir);
+        $pagerfanta = new Pagerfanta($adapter);
+        $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
+
         return $this->render('admin/allmedia.html.twig',
             [
                 'controller_name' => 'AdminController',
-                'images' => $imagesInDir
+                'my_pager' => $pagerfanta
             ]
         );
     }

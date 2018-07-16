@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\Category;
+use Pagerfanta\Adapter\ArrayAdapter;
+use Pagerfanta\Pagerfanta;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
@@ -14,7 +16,6 @@ use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -32,19 +33,17 @@ class UserController extends AbstractController
     /**
     * @Route("/", name="user")
     */
-    public function index(Request $request)
+    public function index(Request $request, UserPasswordEncoderInterface $passwordEncoder)
     {
         $user = new User();
 
         $form = $this->createFormBuilder($user)
             ->add('email', EmailType::class, array(
                 'label' => 'Enter Email *',
-                'required' => true,
                 'attr' => ['class' => 'form-control', 'id' => 'dist']
             ))
             ->add('password', PasswordType::class, array(
                 'label' => 'Enter Password *',
-                'required' => true,
                 'attr' => ['class' => 'form-control']
             ))
             ->add('login', SubmitType::class, array(
@@ -55,14 +54,13 @@ class UserController extends AbstractController
 
         $form->handleRequest($request);
 
-        if($form->isSubmitted() && $form->isValid()) {
+        if($form->isSubmitted() /* && $form->isValid()*/) {
             $user = $form->getData();
 
             $repository = $this->getDoctrine()->getRepository(User::class);
 
             $check = $repository->findOneBy([
-                'email' => $user->getEmail(),
-                'password' => $user->getPassword()
+                'email' => $user->getEmail()
             ]);
 
             if($check) {
@@ -84,7 +82,7 @@ class UserController extends AbstractController
         }
 
         return $this->render('user/index.html.twig', [
-            'form' => $form->createView(),
+            'form' => $form->createView()
         ]);
     }
 
@@ -131,12 +129,10 @@ class UserController extends AbstractController
         $form = $this->createFormBuilder($user)
             ->add('email', EmailType::class, array(
                 'label' => 'Enter Email *',
-                'required' => true,
                 'attr' => ['class' => 'form-control']
             ))
             ->add('password', RepeatedType::class, array(
                 'type' => PasswordType::class,
-                'required' => true,
                 'first_options'  => array(
                     'label' => 'Password *',
                     'attr' => ['class' => 'form-control']
@@ -198,19 +194,17 @@ class UserController extends AbstractController
     /**
      * @Route("/user/register", name="user_register")
      */
-    public function register(Request $request)
+    public function register(Request $request, UserPasswordEncoderInterface $passwordEncoder)
     {
         $user = new User();
 
         $form = $this->createFormBuilder($user)
             ->add('email', EmailType::class, array(
                 'label' => 'Enter Email *',
-                'required' => true,
                 'attr' => ['class' => 'form-control']
             ))
             ->add('password', RepeatedType::class, array(
                 'type' => PasswordType::class,
-                'required' => true,
                 'first_options'  => array(
                     'label' => 'Password *',
                     'attr' => ['class' => 'form-control']
@@ -236,7 +230,10 @@ class UserController extends AbstractController
 
             $user->setEmail($userData->getEmail());
 
-            $user->setPassword($userData->getPassword());
+            $password = $passwordEncoder->encodePassword($user, $userData->getPlainPassword());
+            $string = 'hello';
+            $salt = md5($string);
+            $user->setPassword($password.$salt);
             $user->setIsAdmin(0);
 
             $entityManager->persist($user);
@@ -259,7 +256,7 @@ class UserController extends AbstractController
     /**
      * @Route("/user/posts", name="user_posts")
      */
-    public function posts()
+    public function posts(Request $request)
     {
         $repository = $this->getDoctrine()->getRepository(Post::class);
 
@@ -268,13 +265,21 @@ class UserController extends AbstractController
         $posts = $repository->findBy([
             'user_id' => $session->get('user_id')
         ]);
-
         rsort($posts);
+
+        $currentPage = $request->query->get('page');
+        if(!$currentPage) {
+            $currentPage = 1;
+        }
+
+        $adapter = new ArrayAdapter($posts);
+        $pagerfanta = new Pagerfanta($adapter);
+        $pagerfanta->setMaxPerPage(10)->setCurrentPage($currentPage);
 
         return $this->render('user/posts.html.twig',
             [
                 'controller_name' => 'UserController',
-                'posts' => $posts
+                'my_pager' => $pagerfanta
             ]
         );
     }
@@ -291,10 +296,14 @@ class UserController extends AbstractController
 
         $categories = $repository->findAll();
 
-        $cats = [0 => null];
+        $categoriesTemp = [0 => ''];
+        $categoriesIds = [0 => 0];
         foreach($categories as $category) {
-            array_push($cats, [$category->getName() => $category->getId()]);
+            array_push($categoriesTemp, $category->getName());
+            array_push($categoriesIds, $category->getId());
         }
+
+        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $post = new Post();
 
@@ -316,7 +325,7 @@ class UserController extends AbstractController
                 'data' => $userId
             ))
             ->add('category_id', ChoiceType::class, array(
-                'choices' =>  $cats,
+                'choices' =>  $categoriesDropdown,
                 'label' => 'Select Category *',
                 'attr' => ['class' => 'form-control']
             ))
@@ -329,7 +338,7 @@ class UserController extends AbstractController
         $form->handleRequest($request);
 
         if($form->isSubmitted() && $form->isValid()) {
-            $form->getData();
+            $post = $form->getData();
 
             $entityManager = $this->getDoctrine()->getManager();
 
@@ -368,7 +377,6 @@ class UserController extends AbstractController
 
         return $this->render('user/addnew.html.twig',
             [
-                'controller_name' => 'UserController',
                 'form' => $form->createView()
             ]);
     }
@@ -387,10 +395,14 @@ class UserController extends AbstractController
 
         $categories = $repository->findAll();
 
-        $cats = [0 => null];
+        $categoriesTemp = [0 => ''];
+        $categoriesIds = [0 => 0];
         foreach($categories as $category) {
-            array_push($cats, [$category->getName() => $category->getId()]);
+            array_push($categoriesTemp, $category->getName());
+            array_push($categoriesIds, $category->getId());
         }
+
+        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
 
@@ -414,7 +426,7 @@ class UserController extends AbstractController
                 'data_class' => null
             ))
             ->add('category_id', ChoiceType::class, array(
-                'choices' =>  $cats,
+                'choices' =>  $categoriesDropdown,
                 'label' => 'Select Category',
                 'attr' => ['class' => 'form-control']
             ))
@@ -476,18 +488,23 @@ class UserController extends AbstractController
         $postId = $request->request->get('post_id');
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
-
-        $entityManager = $this->getDoctrine()->getManager();
-
         $post = $repository->find($postId);
 
+        if($post->getImagePath()) {
+            $filename = 'img/posts/' . $post->getImagePath();
+        }
+
+        $entityManager = $this->getDoctrine()->getManager();
         $entityManager->remove($post);
 
         try {
             $entityManager->flush();
             $fileSystem = new Filesystem();
-            $filename = 'img/posts/' . $post->getImagePath();
-            $fileSystem->remove($filename);
+
+            if($filename) {
+                $fileSystem->remove($filename);
+            }
+
             $this->addFlash('success', 'Post has been successfully deleted');
         } catch(\Exception $e) {
             $this->addFlash('error', 'Error while deleting post');

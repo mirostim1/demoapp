@@ -22,7 +22,8 @@
         "symfony/validator": "^3.4",
         "symfony/web-link": "^3.4",
         "symfony/webpack-encore-pack": "*",
-        "symfony/yaml": "^3.4"
+        "symfony/yaml": "^3.4",
+        "white-october/pagerfanta-bundle": "^1.2"
     },
     "require-dev": {
         "symfony/debug-pack": "*",

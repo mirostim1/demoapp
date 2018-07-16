@@ -6,10 +6,15 @@
     <div class="col-md-12 ">
         <h1>All Media</h1>
         <small>List of all media files in posts images directory.</small>
-        <form action="/admin/deleteimages" method="post">
-        <button type="submit" class="btn btn-warning pull-right">Delete selected</button>
+
+        {% if my_pager|length > 0 %}
+            <form action="/admin/deleteimages" method="post">
+                <button type="submit" class="btn btn-warning pull-right">Delete selected</button>
+        {% endif %}
+
         <br><br>
         <hr>
+
         {% for message in app.flashes('error') %}
             <div class="alert alert-danger">
                 {{ message }}
@@ -22,7 +27,7 @@
             </div>
         {% endfor %}
 
-        {% if images|length > 0 %}
+        {% if my_pager|length > 0 %}
             <table class="table table-striped">
                 <thead>
                     <th><input id="chkbox" type="checkbox"></th>
@@ -32,7 +37,7 @@
                     <th>Delete</th>
                 </thead>
                 <tbody>
-                {% for image in images %}
+                {% for image in my_pager.currentPageResults %}
                 <tr>
                     <td><input type="checkbox" class="checkbox" name="checkbox[]" value="{{ image.path }}"></td>
         </form>
@@ -50,6 +55,10 @@
                 </tbody>
                 {% endfor %}
             </table>
+
+            <div class="pagerfanta text-center">
+                {{ pagerfanta(my_pager, 'twitter_bootstrap3', { 'omitFirstPage': true}) }}
+            </div>
         {% else %}
             <h3>There are no images for display</h3>
         {% endif %}
@@ -58,13 +67,16 @@
 
 {% block javascripts %}
     <script>
-        $(document).ready(function() {
 
-            $('#chkbox').on('click', function() {
-                if($('#chkbox').prop('checked') == true) {
-                    $('.checkbox').prop('checked', true);
+        var $j = jQuery.noConflict();
+
+        $j(document).ready(function() {
+
+            $j('#chkbox').on('click', function() {
+                if($j('#chkbox').prop('checked') == true) {
+                    $j('.checkbox').prop('checked', true);
                 } else {
-                    $('.checkbox').prop('checked', false);
+                    $j('.checkbox').prop('checked', false);
                 }
             });
 

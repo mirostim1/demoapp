@@ -34,7 +34,10 @@ class Post
     /**
      * @ORM\Column(type="integer")
      * @Assert\NotBlank()
-     * @Assert\GreaterThan(0)
+     * @Assert\GreaterThan(
+     *     value = 0,
+     *     message = "This value must not be blank"
+     * )
      */
     private $category_id;
 
@@ -57,7 +60,7 @@ class Post
      * @ORM\Column(type="string", length=255, nullable=true)
      * @Assert\File(
      *     maxSize = "3072k",
-     *     mimeTypes = {"image/jpg", "image/png"},
+     *     mimeTypes = {"image/jpeg", "image/png"},
      *     mimeTypesMessage = "Please upload a valid image file"
      * )
      */

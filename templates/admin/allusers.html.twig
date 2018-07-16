@@ -21,16 +21,16 @@
             </div>
         {% endfor %}
 
-        {% if users|length > 0 %}
+        {% if my_pager|length > 0 %}
             <table class="table table-striped">
                 <thead>
-                    <th>Title</th>
-                    <th>Content</th>
+                    <th>#</th>
+                    <th>Email</th>
                     <th>Is Admin</th>
                     <th>Action</th>
                 </thead>
                 <tbody>
-                {% for user in users %}
+                {% for user in my_pager.currentPageResults %}
                 <tr>
                     <td>{{ user.id }}</td>
                     <td>{{ user.email }}</td>
@@ -46,6 +46,10 @@
                 </tbody>
                 {% endfor %}
             </table>
+
+            <div class="pagerfanta text-center">
+                {{ pagerfanta(my_pager, 'twitter_bootstrap3', { 'omitFirstPage': true}) }}
+            </div>
         {% else %}
             <h3>There are no users for display</h3>
         {% endif %}
