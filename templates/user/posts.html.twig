@@ -5,6 +5,7 @@
 {% block body %}
     <div class="col-md-12 ">
         <h1>All Posts</h1>
+        <small>Section displays your posts, you can edit and delete posts.</small>
         <a href="/user/addnew" class="btn btn-success pull-right">Add New Post</a>
         <br><br>
         <hr>
@@ -45,7 +46,7 @@
                         {% endif %}
                         <td>{{ post.title }}</td>
                         <td>{{ post.content|length > 10 ? post.content|slice(0, 10) ~ '...' : post.content }}</td>
-                        <td>{{ post.category_id }}</td>
+                        <td>{{ post.category.name|capitalize }}</td>
                         <td>{{ post.created_at|date('d/m/Y H:i') }}</td>
                         <td>{{ post.edited_at|date('d/m/Y H:i') }}</td>
                         <form action="/user/editpost" method="post">

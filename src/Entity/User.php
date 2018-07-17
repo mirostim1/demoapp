@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
@@ -67,9 +69,15 @@ class User implements UserInterface, \Serializable
      */
     private $isActive;
 
+    /**
+     * @ORM\OneToMany(targetEntity="App\Entity\Post", mappedBy="user")
+     */
+    private $posts;
+
     public function __construct()
     {
         $this->roles = array('ROLE_USER');
+        $this->posts = new ArrayCollection();
     }
 
     // other properties and methods
@@ -166,5 +174,13 @@ class User implements UserInterface, \Serializable
             $this->username,
             $this->password,
             ) = unserialize($serialized, array('allowed_classes' => false));
+    }
+
+    /**
+     * @return Collection|Post[]
+     */
+    public function getPosts(): Collection
+    {
+        return $this->posts;
     }
 }

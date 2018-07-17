@@ -195,8 +195,7 @@ class AdminController extends AbstractController
      */
     public function addnew(Request $request)
     {
-        $session = new Session();
-        $userId = $session->get('user_id');
+        $userId = $this->getUser()->getId();
 
         $repository = $this->getDoctrine()->getRepository(Category::class);
         $categories = $repository->findAll();
@@ -249,7 +248,7 @@ class AdminController extends AbstractController
             $date = new \DateTime();
             $post->setCreatedAt($date);
             $post->setEditedAt($date);
-            $post->setUserId($session->get('user_id'));
+            $post->setUserId($userId);
 
             if($post->getImagePath() != null) {
                 $newFileName = 'image' . time();

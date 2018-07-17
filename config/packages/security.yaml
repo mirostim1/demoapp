@@ -15,7 +15,6 @@ security:
             form_login:
                 login_path: login
                 check_path: login
-                # default_target_path: user_profile
             provider: our_db_provider
             logout:
                 path: /logout

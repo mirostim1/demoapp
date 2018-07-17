@@ -66,6 +66,16 @@ class Post
      */
     public $image_path;
 
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\Category", inversedBy="posts")
+     */
+    private $category;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\User", inversedBy="posts")
+     */
+    private $user;
+
     public function getId()
     {
         return $this->id;
@@ -151,6 +161,30 @@ class Post
     public function setImagePath(string $image_path)
     {
         $this->image_path = $image_path;
+
+        return $this;
+    }
+
+    public function getCategory(): ?Category
+    {
+        return $this->category;
+    }
+
+    public function setCategory(?Category $category): self
+    {
+        $this->category = $category;
+
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): self
+    {
+        $this->user = $user;
 
         return $this;
     }

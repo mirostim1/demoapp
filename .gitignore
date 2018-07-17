@@ -5,6 +5,7 @@
 /var/
 /vendor/
 /.idea/
+/public/img/
 ###< symfony/framework-bundle ###
 
 ###> symfony/webpack-encore-pack ###

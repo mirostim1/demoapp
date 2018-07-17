@@ -137,19 +137,28 @@ class UserController extends AbstractController
 
         $user = $this->getUser();
 
-        $queryBuilder = $em->createQueryBuilder()
-                ->select('p')
-                ->from('App\Entity\Post', 'p')
-                ->where('p.user_id = :user_id')
-                ->orderBy('p.id', 'DESC')
-                ->setParameter('user_id', $user->getId());
+        $posts = $this->getDoctrine()
+                ->getRepository(Post::class)
+                ->findBy([
+                    'id' => $user->getId()
+                ]);
+
+        //var_dump($posts[0]->getCategory()->getName());die();
+
+//        $queryBuilder = $em->createQueryBuilder()
+//                ->select('p')
+//                ->from('App\Entity\Post', 'p')
+//                ->where('p.user_id = :user_id')
+//                ->orderBy('p.id', 'DESC')
+//                ->setParameter('user_id', $user->getId());
 
         $currentPage = $request->query->get('page');
         if(!$currentPage) {
             $currentPage = 1;
         }
 
-        $adapter = new DoctrineORMAdapter($queryBuilder);
+        //$adapter = new DoctrineORMAdapter($queryBuilder);
+        $adapter = new ArrayAdapter($posts);
         $pagerfanta = new Pagerfanta($adapter);
 
         if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
@@ -225,11 +234,27 @@ class UserController extends AbstractController
 
             $post->setTitle($post->getTitle());
             $post->setContent($post->getContent());
-            $post->setCategoryId($post->getCategoryId());
             $date = new \DateTime();
             $post->setCreatedAt($date);
             $post->setEditedAt($date);
-            $post->setUserId($userId);
+
+            $category = new Category();
+            $repo1 = $this->getDoctrine()->getRepository(Category::class);
+            $categoryData = $repo1->findOneBy(
+                [
+                    'id' => $post->getCategoryId()
+                ]
+            );
+
+            $user = new User();
+            $repo = $this->getDoctrine()->getRepository(User::class);
+            $userData = $repo->findOneBy(
+                [
+                    'id' => $userId
+                ]
+            );
+            $post->setCategory($categoryData);
+            $post->setUser($userData);
 
             if($post->getImagePath() != null) {
                 $newFileName = 'image' . time();

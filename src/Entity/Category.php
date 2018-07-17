@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
@@ -34,6 +36,16 @@ class Category
      */
     public $created_at;
 
+    /**
+     * @ORM\OneToMany(targetEntity="App\Entity\Post", mappedBy="category")
+     */
+    private $posts;
+
+    public function __construct()
+    {
+        $this->posts = new ArrayCollection();
+    }
+
     public function getId()
     {
         return $this->id;
@@ -61,5 +73,13 @@ class Category
         $this->created_at = $created_at;
 
         return $this;
+    }
+
+    /**
+     * @return Collection|Post[]
+     */
+    public function getPosts(): Collection
+    {
+        return $this->posts;
     }
 }
