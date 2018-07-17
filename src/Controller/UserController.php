@@ -133,7 +133,7 @@ class UserController extends AbstractController
      */
     public function posts(Request $request)
     {
-        $em = $this->getDoctrine()->getManager();
+//        $em = $this->getDoctrine()->getManager();
 
         $user = $this->getUser();
 
@@ -142,8 +142,6 @@ class UserController extends AbstractController
                 ->findBy([
                     'id' => $user->getId()
                 ]);
-
-        //var_dump($posts[0]->getCategory()->getName());die();
 
 //        $queryBuilder = $em->createQueryBuilder()
 //                ->select('p')
@@ -238,21 +236,21 @@ class UserController extends AbstractController
             $post->setCreatedAt($date);
             $post->setEditedAt($date);
 
-            $category = new Category();
-            $repo1 = $this->getDoctrine()->getRepository(Category::class);
-            $categoryData = $repo1->findOneBy(
+            $repoCategory = $this->getDoctrine()->getRepository(Category::class);
+            $repoUser = $this->getDoctrine()->getRepository(User::class);
+
+            $categoryData = $repoCategory->findOneBy(
                 [
                     'id' => $post->getCategoryId()
                 ]
             );
 
-            $user = new User();
-            $repo = $this->getDoctrine()->getRepository(User::class);
-            $userData = $repo->findOneBy(
+            $userData = $repoUser->findOneBy(
                 [
                     'id' => $userId
                 ]
             );
+
             $post->setCategory($categoryData);
             $post->setUser($userData);
 

@@ -262,6 +262,24 @@ class AdminController extends AbstractController
                 $post->setImagePath('');
             }
 
+            $repoCategory = $this->getDoctrine()->getRepository(Category::class);
+            $repoUser = $this->getDoctrine()->getRepository(User::class);
+
+            $categoryData = $repoCategory->findOneBy(
+                [
+                    'id' => $post->getCategoryId()
+                ]
+            );
+
+            $userData = $repoUser->findOneBy(
+                [
+                    'id' => $userId
+                ]
+            );
+
+            $post->setCategory($categoryData);
+            $post->setUser($userData);
+
             $entityManager->persist($post);
 
             try {
