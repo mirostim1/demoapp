@@ -25,33 +25,25 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use App\Entity\User;
 use App\Entity\Post;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
 class AdminController extends AbstractController
 {
-
-    public function __construct()
-    {
-        $session = new Session();
-
-        if($session->get('is_admin') != 1) {
-            return $this->redirect('/');
-        }
-    }
 
     /**
      * @Route("/admin/profile", name="admin_profile")
      */
     public function adminLogin(Request $request, SessionInterface $session)
     {
-        $session = new Session();
+        $userId = $this->getUser()->getId();
 
-        if($session->get('is_admin') == 1) {
+        $role = $this->getUser()->getRoles();
+
+        if($role[0] == 'ROLE_ADMIN') {
             $isAdmin = 'Yes';
         } else {
             $isAdmin = 'No';
         }
-
-        $userId = $session->get('user_id');
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
 
@@ -64,7 +56,7 @@ class AdminController extends AbstractController
         return $this->render('admin/profile.html.twig',
             [
                 'controller_name' => 'AdminController',
-                'email' => $session->get('email'),
+                'email' => $this->getUser()->getEmail(),
                 'is_admin' => $isAdmin,
                 'nr_posts' => $nrPosts
             ]
@@ -76,15 +68,12 @@ class AdminController extends AbstractController
      */
     public function allposts(Request $request)
     {
-        $repository = $this->getDoctrine()->getRepository(Post::class);
-        $posts = $repository->findAll();
-        rsort($posts);
+        $em = $this->getDoctrine()->getManager();
 
-        //$entityManager = $this->getDoctrine()->getManager();
-
-//        $queryBuilder = $entityManager->createQueryBuilder()
-//                    ->select('p')
-//                    ->from('App\Entity\Post', 'p');
+        $queryBuilder = $em->createQueryBuilder()
+                    ->select('p')
+                    ->from('App\Entity\Post', 'p')
+                    ->orderBy('p.id', 'DESC');
 
         $currentPage = $request->query->get('page');
 
@@ -92,7 +81,7 @@ class AdminController extends AbstractController
             $currentPage = 1;
         }
 
-        $adapter = new ArrayAdapter($posts);
+        $adapter = new DoctrineORMAdapter($queryBuilder);
         $pagerfanta = new Pagerfanta($adapter);
 
         if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
@@ -105,7 +94,8 @@ class AdminController extends AbstractController
             [
                 'controller_name' => 'AdminController',
                 'my_pager' => $pagerfanta,
-            ]);
+            ]
+        );
     }
 
     /**
@@ -118,14 +108,10 @@ class AdminController extends AbstractController
         $repository = $this->getDoctrine()->getRepository(Category::class);
         $categories = $repository->findAll();
 
-        $categoriesTemp = [0 => ''];
-        $categoriesIds = [0 => 0];
+        $categoriesDropdown = [];
         foreach($categories as $category) {
-            array_push($categoriesTemp, $category->getName());
-            array_push($categoriesIds, $category->getId());
+            $categoriesDropdown[$category->getName()] = $category->getId();
         }
-
-        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
 
@@ -215,14 +201,10 @@ class AdminController extends AbstractController
         $repository = $this->getDoctrine()->getRepository(Category::class);
         $categories = $repository->findAll();
 
-        $categoriesTemp = [0 => ''];
-        $categoriesIds = [0 => 0];
+        $categoriesDropdown = [];
         foreach($categories as $category) {
-            array_push($categoriesTemp, $category->getName());
-            array_push($categoriesIds, $category->getId());
+            $categoriesDropdown[$category->getName()] = $category->getId();
         }
-
-        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $post = new Post();
 
@@ -339,19 +321,19 @@ class AdminController extends AbstractController
      */
     public function allusers(Request $request)
     {
-        $repository = $this->getDoctrine()->getRepository(User::class);
+        $em = $this->getDoctrine()->getManager();
 
-        $session = new Session();
-
-        $users = $repository->findAll();
-        rsort($users);
+        $queryBuilder = $em->createQueryBuilder()
+                ->select('u')
+                ->from('App\Entity\User', 'u')
+                ->orderBy('u.id', 'DESC');
 
         $currentPage = $request->query->get('page');
         if(!$currentPage) {
             $currentPage = 1;
         }
 
-        $adapter = new ArrayAdapter($users);
+        $adapter = new DoctrineORMAdapter($queryBuilder);
         $pagerfanta = new Pagerfanta($adapter);
 
         if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
@@ -371,28 +353,33 @@ class AdminController extends AbstractController
     /**
      * @Route("/admin/newuser", name="admin_add_new_user")
      */
-    public function addNewUser(Request $request)
+    public function addNewUser(Request $request, UserPasswordEncoderInterface $passwordEncoder)
     {
         $user = new User();
 
+        $rolesArray = [
+            'User' => 'ROLE_USER',
+            'Admin'  => 'ROLE_ADMIN'
+        ];
+
         $form = $this->createFormBuilder($user)
-            ->add('is_admin', ChoiceType::class, array(
-                'choices' => array('User' => 0, 'Admin' => 1),
-                'attr' => ['class' => 'form-control']
+            ->add('roles', ChoiceType::class, array(
+                'label' => 'Select Role *',
+                'choices' => $rolesArray,
+                'attr' => ['class' => 'form-control'],
+                'multiple' => true,
             ))
-            ->add('email', EmailType::class, array(
+            ->add('username', EmailType::class, array(
                 'label' => 'Enter Email *',
-                'required' => true,
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control'],
             ))
-            ->add('password', PasswordType::class, array(
+            ->add('plainPassword', PasswordType::class, array(
                 'label' => 'Enter Password *',
-                'required' => true,
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control'],
             ))
             ->add('submit', SubmitType::class, array(
                 'label' => 'Submit',
-                'attr' => ['class' => 'form-control btn btn-success']
+                'attr' => ['class' => 'form-control btn btn-success'],
             ))
             ->getForm();
 
@@ -403,9 +390,10 @@ class AdminController extends AbstractController
 
             $entityManager = $this->getDoctrine()->getManager();
 
-            $user->setEmail($user->getEmail());
-            $user->setPassword($user->getPassword());
-            $user->setIsAdmin($user->getIsAdmin());
+            $user->setEmail($user->getUsername());
+            $user->setPassword($passwordEncoder->encodePassword($user, $user->getPlainPassword()));
+            $user->setRoles($user->getRoles());
+            $user->setIsActive(1);
 
             $entityManager->persist($user);
 
@@ -438,24 +426,31 @@ class AdminController extends AbstractController
             'id' => $request->request->get('user_id')
         ]);
 
-        if(isset($user)) {
+        $rolesArray = [
+            'User' => 'ROLE_USER',
+            'Admin'  => 'ROLE_ADMIN'
+        ];
+
+        if($user) {
             $userId = $user->getId();
         }
 
         $form = $this->createFormBuilder($user)
-            ->add('is_admin', ChoiceType::class, array(
-                'choices' => array('User' => 0, 'Admin' => 1),
-                'attr' => ['class' => 'form-control']
+            ->add('roles', ChoiceType::class, array(
+                'label' => 'Choose Role',
+                'choices' => $rolesArray,
+                'attr' => ['class' => 'form-control'],
+                'multiple' => true,
             ))
-            ->add('email', EmailType::class, array(
-                'label' => 'Enter Email *',
+            ->add('username', EmailType::class, array(
+                'label' => 'Users Email',
                 'required' => true,
-                'attr' => ['class' => 'form-control', 'readonly' => true]
+                'attr' => ['class' => 'form-control', 'readonly' => true],
             ))
-            ->add('id', HiddenType::class, array())
+            ->add('id', HiddenType::class)
             ->add('submit', SubmitType::class, array(
                 'label' => 'Update',
-                'attr' => ['class' => 'form-control btn btn-success']
+                'attr' => ['class' => 'form-control btn btn-success'],
             ))
             ->getForm();
 
@@ -463,13 +458,14 @@ class AdminController extends AbstractController
 
         if($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
-
-            $userId = $user['id'];
+            //var_dump($user); die();
 
             $entityManager = $this->getDoctrine()->getManager();
             $editUser = $entityManager->getRepository(User::class)->find($user['id']);
 
-            $editUser->setIsAdmin($user['is_admin']);
+            $editUser->setEmail($user['username']);
+            $editUser->setRoles($user['roles']);
+            $editUser->setIsActive(1);
 
             try {
                 $entityManager->flush();

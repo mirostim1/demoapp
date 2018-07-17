@@ -25,18 +25,27 @@ class User implements UserInterface, \Serializable
     /**
     * @ORM\Column(type="string", length=255, unique=true)
     * @Assert\Email()
+    * @Assert\Length(
+     *     min=2,
+     *     max=100
+     * )
     */
     private $email;
 
     /**
     * @ORM\Column(type="string", length=255, unique=true)
-    * @Assert\NotBlank()
+    * @Assert\Length(
+    *     min=2,
+    *     max=70
+    * )
     */
     private $username;
 
     /**
-    * @Assert\NotBlank()
-    * @Assert\Length(max=4096)
+    * @Assert\Length(
+    *     min=2,
+    *     max=4096
+    *)
     */
     private $plainPassword;
 
@@ -120,6 +129,11 @@ class User implements UserInterface, \Serializable
     public function getRoles()
     {
         return $this->roles;
+    }
+
+    public function setRoles($roles)
+    {
+        $this->roles = $roles;
     }
 
     public function getIsActive()

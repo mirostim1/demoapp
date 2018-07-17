@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Category;
 use Pagerfanta\Adapter\ArrayAdapter;
+use Pagerfanta\Adapter\DoctrineORMAdapter;
 use Pagerfanta\Pagerfanta;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -73,11 +74,7 @@ class UserController extends AbstractController
         $user = new User();
 
         $form = $this->createFormBuilder($user)
-            ->add('email', EmailType::class, array(
-                'label' => 'Enter Email *',
-                'attr' => ['class' => 'form-control']
-            ))
-            ->add('password', RepeatedType::class, array(
+            ->add('plainPassword', RepeatedType::class, array(
                 'type' => PasswordType::class,
                 'first_options'  => array(
                     'label' => 'New Password *',
@@ -100,33 +97,27 @@ class UserController extends AbstractController
         if($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
 
-            $session = new Session();
-            $userId = $session->get('user_id');
+            $userData = $this->getUser();
 
             $repository = $this->getDoctrine()->getRepository(User::class);
 
             $newPass = $repository->findOneBy([
-                'id' => $userId
+                'id' => $userData->getId()
             ]);
 
-            if($data->getEmail() == $newPass->getEmail()) {
-                $entityManager = $this->getDoctrine()->getManager();
+            $entityManager = $this->getDoctrine()->getManager();
 
-                $newPass->setPassword($passwordEncoder->encodePassword($user, $data->getPassword()));
+            $newPass->setPassword($passwordEncoder->encodePassword($user, $data->getPlainPassword()));
 
-                $entityManager->persist($newPass);
+            $entityManager->persist($newPass);
 
-                try {
-                    $entityManager->flush();
-                    $this->addFlash('success', 'Password has been changed successfully');
-                    return $this->redirectToRoute('user_profile');
-                } catch(\Exception $e) {
-                    $this->addFlash('error', 'Error during changing password');
-                    return $this->redirectToRoute('user_profile');
-                }
-            } else {
-                $this->addFlash('error', 'Email do not match your registration email. Please enter correct email.');
-                return $this->redirectToRoute('user_new_password');
+            try {
+                $entityManager->flush();
+                $this->addFlash('success', 'Password has been changed successfully');
+                return $this->redirectToRoute('user_profile');
+            } catch(\Exception $e) {
+                $this->addFlash('error', 'Error during changing password');
+                return $this->redirectToRoute('user_profile');
             }
         }
 
@@ -136,27 +127,29 @@ class UserController extends AbstractController
             ]
         );
     }
-    
+
     /**
      * @Route("/user/posts", name="user_posts")
      */
     public function posts(Request $request)
     {
-        $repository = $this->getDoctrine()->getRepository(Post::class);
+        $em = $this->getDoctrine()->getManager();
 
-        $session = new Session();
+        $user = $this->getUser();
 
-        $posts = $repository->findBy([
-            'user_id' => $session->get('user_id')
-        ]);
-        rsort($posts);
+        $queryBuilder = $em->createQueryBuilder()
+                ->select('p')
+                ->from('App\Entity\Post', 'p')
+                ->where('p.user_id = :user_id')
+                ->orderBy('p.id', 'DESC')
+                ->setParameter('user_id', $user->getId());
 
         $currentPage = $request->query->get('page');
         if(!$currentPage) {
             $currentPage = 1;
         }
 
-        $adapter = new ArrayAdapter($posts);
+        $adapter = new DoctrineORMAdapter($queryBuilder);
         $pagerfanta = new Pagerfanta($adapter);
 
         if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
@@ -178,21 +171,17 @@ class UserController extends AbstractController
      */
     public function addNewPost(Request $request)
     {
-        $session = new Session();
-        $userId = $session->get('user_id');
+        $user = $this->getUser();
+        $userId = $user->getId();
 
         $repository = $this->getDoctrine()->getRepository(Category::class);
 
         $categories = $repository->findAll();
 
-        $categoriesTemp = [0 => ''];
-        $categoriesIds = [0 => 0];
+        $categoriesDropdown = [];
         foreach($categories as $category) {
-            array_push($categoriesTemp, $category->getName());
-            array_push($categoriesIds, $category->getId());
+            $categoriesDropdown[$category->getName()] = $category->getId();
         }
-
-        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $post = new Post();
 
@@ -229,6 +218,9 @@ class UserController extends AbstractController
         if($form->isSubmitted() && $form->isValid()) {
             $post = $form->getData();
 
+            $user = $this->getUser();
+            $userId = $user->getId();
+
             $entityManager = $this->getDoctrine()->getManager();
 
             $post->setTitle($post->getTitle());
@@ -237,7 +229,7 @@ class UserController extends AbstractController
             $date = new \DateTime();
             $post->setCreatedAt($date);
             $post->setEditedAt($date);
-            $post->setUserId($session->get('user_id'));
+            $post->setUserId($userId);
 
             if($post->getImagePath() != null) {
                 $newFileName = 'image' . time();
@@ -277,21 +269,17 @@ class UserController extends AbstractController
     {
         $postId = $request->request->get('post_id');
 
-        $session = new Session();
-        $userId = $session->get('user_id');
+        $user = $this->getUser();
+        $userId = $user->getId();
 
         $repository = $this->getDoctrine()->getRepository(Category::class);
 
         $categories = $repository->findAll();
 
-        $categoriesTemp = [0 => ''];
-        $categoriesIds = [0 => 0];
+        $categoriesDropdown = [];
         foreach($categories as $category) {
-            array_push($categoriesTemp, $category->getName());
-            array_push($categoriesIds, $category->getId());
+            $categoriesDropdown[$category->getName()] = $category->getId();
         }
-
-        $categoriesDropdown = array_combine($categoriesTemp, $categoriesIds);
 
         $repository = $this->getDoctrine()->getRepository(Post::class);
 
@@ -339,7 +327,7 @@ class UserController extends AbstractController
             $editPost->setCategoryId($post['category_id']);
             $date = new \DateTime();
             $editPost->setEditedAt($date);
-            $editPost->setUserId($session->get('user_id'));
+            $editPost->setUserId($userId);
 
             if($post['image_path'] != null) {
                 $newFileName = 'image' . time();

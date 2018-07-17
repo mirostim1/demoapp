@@ -106,6 +106,6 @@ class SecurityController extends Controller
      */
     public function logout()
     {
-
+        $this->addFlash('success', 'Successfully logout');
     }
 }

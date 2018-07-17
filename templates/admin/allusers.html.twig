@@ -34,7 +34,7 @@
                 <tr>
                     <td>{{ user.id }}</td>
                     <td>{{ user.email }}</td>
-                    {% if user.is_admin == 1 %}
+                    {% if user.roles.0 == 'ROLE_ADMIN' %}
                         <td>Yes</td>
                     {% else %}
                         <td>No</td>
