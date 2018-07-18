@@ -4,9 +4,12 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\PostRepository")
+ * @ORM\Table(name="`post`")
  */
 class Post
 {
@@ -20,14 +23,19 @@ class Post
     /**
      * @ORM\Column(type="string", length=255)
      * @Assert\NotBlank()
-     * @Assert\NotNull()
+     * @Assert\Length(
+     *     min=2,
+     *     max=255
+     * )
      */
     private $title;
 
     /**
      * @ORM\Column(type="text")
      * @Assert\NotBlank()
-     * @Assert\NotNull()
+     * @Assert\Length(
+     *     min=2
+     * )
      */
     private $content;
 
@@ -81,12 +89,17 @@ class Post
         return $this->id;
     }
 
+    public function setId($id)
+    {
+        $this->id = $id;
+    }
+
     public function getTitle()
     {
         return $this->title;
     }
 
-    public function setTitle(string $title): self
+    public function setTitle(string $title)
     {
         $this->title = $title;
 
@@ -98,7 +111,7 @@ class Post
         return $this->content;
     }
 
-    public function setContent(string $content): self
+    public function setContent(string $content)
     {
         $this->content = $content;
 
@@ -110,7 +123,7 @@ class Post
         return $this->category_id;
     }
 
-    public function setCategoryId(int $category_id): self
+    public function setCategoryId(int $category_id)
     {
         $this->category_id = $category_id;
 
@@ -122,7 +135,7 @@ class Post
         return $this->created_at;
     }
 
-    public function setCreatedAt(\DateTimeInterface $created_at): self
+    public function setCreatedAt(\DateTimeInterface $created_at)
     {
         $this->created_at = $created_at;
 
@@ -134,7 +147,7 @@ class Post
         return $this->edited_at;
     }
 
-    public function setEditedAt(\DateTimeInterface $edited_at): self
+    public function setEditedAt(\DateTimeInterface $edited_at)
     {
         $this->edited_at = $edited_at;
 
@@ -146,7 +159,7 @@ class Post
         return $this->user_id;
     }
 
-    public function setUserId(int $user_id): self
+    public function setUserId(int $user_id)
     {
         $this->user_id = $user_id;
 
@@ -170,7 +183,7 @@ class Post
         return $this->category;
     }
 
-    public function setCategory(?Category $category): self
+    public function setCategory(?Category $category)
     {
         $this->category = $category;
 
@@ -182,7 +195,7 @@ class Post
         return $this->user;
     }
 
-    public function setUser(?User $user): self
+    public function setUser(?User $user)
     {
         $this->user = $user;
 

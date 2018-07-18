@@ -21,8 +21,8 @@ class SecurityController extends Controller
     public function login(Request $request, AuthenticationUtils $authenticationUtils)
     {
         $error = $authenticationUtils->getLastAuthenticationError();
-        $user = $this->getUser();
         $lastUsername = $authenticationUtils->getLastUsername();
+        $user = $this->getUser();
 
         if(!$error && !$lastUsername && $user) {
             $role = $this->getUser()->getRoles();
@@ -73,7 +73,6 @@ class SecurityController extends Controller
 
         if($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
-            //var_dump($user); die();
 
             $entityManager = $this->getDoctrine()->getManager();
 
@@ -106,6 +105,5 @@ class SecurityController extends Controller
      */
     public function logout()
     {
-        $this->addFlash('success', 'Successfully logout');
     }
 }

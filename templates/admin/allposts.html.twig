@@ -50,7 +50,13 @@
                         {% endif %}
                         <td>{{ post.title }}</td>
                         <td>{{ post.content|length > 10 ? post.content|slice(0, 10) ~ '...' : post.content }}</td>
-                        <td>{{ post.category.name|capitalize }}</td>
+                        <td>
+                            {% if post.category != null %}
+                                {{  post.category.name|capitalize }}
+                            {% else %}
+                                {{ 'Uncategorized' }}
+                            {% endif %}
+                        </td>
                         <td>{{ post.user.email }}</td>
                         <td>{{ post.created_at|date('d/m/Y H:i') }}</td>
                         <td>{{ post.edited_at|date('d/m/Y H:i') }}</td>

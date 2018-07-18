@@ -29,7 +29,6 @@ use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
 class AdminController extends AbstractController
 {
-
     /**
      * @Route("/admin/profile", name="admin_profile")
      */
@@ -142,7 +141,7 @@ class AdminController extends AbstractController
                 'label' => 'Select Category',
                 'attr' => ['class' => 'form-control']
             ))
-            ->add('register', SubmitType::class, array(
+            ->add('submit', SubmitType::class, array(
                 'label' => 'Update',
                 'attr' => ['class' => 'form-control btn btn-success']
             ))
@@ -151,24 +150,28 @@ class AdminController extends AbstractController
         $form->handleRequest($request);
 
         if($form->isSubmitted() && $form->isValid()) {
-            $post = $form->getData();
+            $formData = $form->getData();
+            $repository = $this->getDoctrine()->getRepository(Post::class);
+
+            $post = $repository->findOneBy([
+                'id' => $formData['id']
+            ]);
 
             $entityManager = $this->getDoctrine()->getManager();
 
-            $editPost = $entityManager->getRepository(Post::class)->find($post['id']);
-            $editPost->setTitle($post['title']);
-            $editPost->setContent($post['content']);
-            $editPost->setCategoryId($post['category_id']);
+            $post->setTitle($formData['title']);
+            $post->setContent($formData['content']);
+            $post->setCategoryId($formData['category_id']);
             $date = new \DateTime();
-            $editPost->setEditedAt($date);
+            $post->setEditedAt($date);
 
-            if($post['image_path'] != null) {
+            if($formData['image_path'] != null) {
                 $newFileName = 'image' . time();
-                $file = $form['image_path']->getData();
+                $file = $formData['image_path'];
                 $extension = $file->guessExtension();
 
                 if($file->move('img/posts', $newFileName . '.' . $extension)) {
-                    $editPost->setImagePath($newFileName . '.' . $extension);
+                    $post->setImagePath($newFileName . '.' . $extension);
                 }
             }
 
@@ -184,10 +187,10 @@ class AdminController extends AbstractController
 
         return $this->render('admin/editpost.html.twig',
             [
-                'controller_name' => 'UserController',
+                'post_id' => $postId,
                 'form' => $form->createView(),
-                'post_id' => $postId
-            ]);
+            ]
+        );
     }
 
     /**
@@ -229,7 +232,7 @@ class AdminController extends AbstractController
                 'label' => 'Select Category *',
                 'attr' => ['class' => 'form-control']
             ))
-            ->add('register', SubmitType::class, array(
+            ->add('submit', SubmitType::class, array(
                 'label' => 'Save',
                 'attr' => ['class' => 'form-control btn btn-success']
             ))
@@ -307,24 +310,16 @@ class AdminController extends AbstractController
     {
         $postId = $request->request->get('post_id');
 
-        $repository = $this->getDoctrine()->getRepository(Post::class);
-        $post = $repository->find($postId);
+        $em = $this->getDoctrine()->getManager();
 
-        if($post->getImagePath()) {
-            $filename = 'img/posts/' . $post->getImagePath();
-        }
-
-        $entityManager = $this->getDoctrine()->getManager();
-        $entityManager->remove($post);
+        $qb = $em->createQueryBuilder()
+            ->delete('App\Entity\Post', 'p')
+            ->where('p.id = :post_id')
+            ->setParameter('post_id', $postId)
+            ->getQuery();
 
         try {
-            $entityManager->flush();
-            $fileSystem = new Filesystem();
-
-            if($filename) {
-                $fileSystem->remove($filename);
-            }
-
+            $qb->getResult();
             $this->addFlash('success', 'Post has been succesfully deleted');
         } catch(\Exception $e) {
             $this->addFlash('error', 'Error while deleting post');
@@ -681,7 +676,7 @@ class AdminController extends AbstractController
 
         $form = $this->createFormBuilder($category)
             ->add('name', TextType::class, array(
-                'label' => 'Name for category *',
+                'label' => 'Enter New Category *',
                 'attr' => ['class' => 'form-control']
             ))
             ->add('submit', SubmitType::class, array(

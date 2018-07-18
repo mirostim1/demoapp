@@ -25,7 +25,6 @@ use App\Entity\User;
 use App\Entity\Post;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 
 
@@ -133,30 +132,30 @@ class UserController extends AbstractController
      */
     public function posts(Request $request)
     {
-//        $em = $this->getDoctrine()->getManager();
+        $em = $this->getDoctrine()->getManager();
 
         $user = $this->getUser();
 
-        $posts = $this->getDoctrine()
-                ->getRepository(Post::class)
-                ->findBy([
-                    'id' => $user->getId()
-                ]);
+//        $posts = $this->getDoctrine()
+//                ->getRepository(Post::class)
+//                ->findBy([
+//                    'id' => $user->getId()
+//                ]);
 
-//        $queryBuilder = $em->createQueryBuilder()
-//                ->select('p')
-//                ->from('App\Entity\Post', 'p')
-//                ->where('p.user_id = :user_id')
-//                ->orderBy('p.id', 'DESC')
-//                ->setParameter('user_id', $user->getId());
+        $queryBuilder = $em->createQueryBuilder()
+                ->select('p')
+                ->from('App\Entity\Post', 'p')
+                ->where('p.user_id = :user_id')
+                ->orderBy('p.id', 'DESC')
+                ->setParameter('user_id', $user->getId());
 
         $currentPage = $request->query->get('page');
         if(!$currentPage) {
             $currentPage = 1;
         }
 
-        //$adapter = new DoctrineORMAdapter($queryBuilder);
-        $adapter = new ArrayAdapter($posts);
+        $adapter = new DoctrineORMAdapter($queryBuilder);
+//        $adapter = new ArrayAdapter($posts);
         $pagerfanta = new Pagerfanta($adapter);
 
         if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
@@ -167,7 +166,6 @@ class UserController extends AbstractController
 
         return $this->render('user/posts.html.twig',
             [
-                'controller_name' => 'UserController',
                 'my_pager' => $pagerfanta
             ]
         );
@@ -387,24 +385,16 @@ class UserController extends AbstractController
     {
         $postId = $request->request->get('post_id');
 
-        $repository = $this->getDoctrine()->getRepository(Post::class);
-        $post = $repository->find($postId);
+        $em = $this->getDoctrine()->getManager();
 
-        if($post->getImagePath()) {
-            $filename = 'img/posts/' . $post->getImagePath();
-        }
-
-        $entityManager = $this->getDoctrine()->getManager();
-        $entityManager->remove($post);
+        $qb = $em->createQueryBuilder()
+            ->delete('App\Entity\Post', 'p')
+            ->where('p.id = :post_id')
+            ->setParameter('post_id', $postId)
+            ->getQuery();
 
         try {
-            $entityManager->flush();
-            $fileSystem = new Filesystem();
-
-            if($filename) {
-                $fileSystem->remove($filename);
-            }
-
+            $qb->getResult();
             $this->addFlash('success', 'Post has been successfully deleted');
         } catch(\Exception $e) {
             $this->addFlash('error', 'Error while deleting post');

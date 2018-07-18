@@ -15,6 +15,9 @@ security:
             form_login:
                 login_path: login
                 check_path: login
+                username_parameter: username
+                password_parameter: password
+                csrf_token_generator: security.csrf.token_manager
             provider: our_db_provider
             logout:
                 path: /logout
