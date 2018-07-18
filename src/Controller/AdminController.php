@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Category;
+use App\Entity\Image;
 use Pagerfanta\Adapter\DoctrineORMAdapter;
 use Pagerfanta\Pagerfanta;
 use Pagerfanta\Adapter\ArrayAdapter;
@@ -259,10 +260,27 @@ class AdminController extends AbstractController
                 $extension = $file->guessExtension();
 
                 if($file->move('img/posts', $newFileName . '.' . $extension)) {
-                    $post->setImagePath($newFileName . '.' . $extension);
+                    $image = new Image();
+                    $image->setImagePath($newFileName. '.' .$extension);
+                    $entityManager->persist($image);
+
+                    try {
+                        $entityManager->flush();
+
+                        $qb = $entityManager->createQueryBuilder()
+                            ->select('i')
+                            ->from('App\Entity\Image', 'i')
+                            ->setMaxResults(1)
+                            ->orderBy('i.id', 'DESC');
+
+                        $lastImage = $qb->getQuery()->getSingleResult();
+
+                        $post->setImageId($lastImage->getId());
+                        $post->setImagePath($newFileName. '.' .$extension);
+                    } catch (\Exception $e) {
+                        echo $e;
+                    }
                 }
-            } else {
-                $post->setImagePath('');
             }
 
             $repoCategory = $this->getDoctrine()->getRepository(Category::class);

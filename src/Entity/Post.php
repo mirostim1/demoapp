@@ -75,6 +75,11 @@ class Post
     public $image_path;
 
     /**
+     * @ORM\Column(type="integer", length=11, nullable=true)
+     */
+    public $image_id;
+
+    /**
      * @ORM\ManyToOne(targetEntity="App\Entity\Category", inversedBy="posts")
      */
     private $category;
@@ -174,6 +179,18 @@ class Post
     public function setImagePath(string $image_path)
     {
         $this->image_path = $image_path;
+
+        return $this;
+    }
+
+    public function getImageId()
+    {
+        return $this->image_id;
+    }
+
+    public function setImageId(int $image_id)
+    {
+        $this->image_id = $image_id;
 
         return $this;
     }
