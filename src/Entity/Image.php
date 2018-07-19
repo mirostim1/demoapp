@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\ImageRepository")
@@ -22,6 +24,11 @@ class Image
      */
     private $image_path;
 
+    /**
+     * @ORM\OneToOne(targetEntity="App\Entity\Post", mappedBy="image")
+     */
+    private $post;
+
     public function getId()
     {
         return $this->id;
@@ -37,5 +44,13 @@ class Image
         $this->image_path = $image_path;
 
         return $this;
+    }
+
+    /**
+     * @return Collection|Post[]
+     */
+    public function getPost(): Collection
+    {
+        return $this->post;
     }
 }

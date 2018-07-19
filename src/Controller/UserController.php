@@ -137,12 +137,6 @@ class UserController extends AbstractController
 
         $user = $this->getUser();
 
-//        $posts = $this->getDoctrine()
-//                ->getRepository(Post::class)
-//                ->findBy([
-//                    'id' => $user->getId()
-//                ]);
-
         $queryBuilder = $em->createQueryBuilder()
                 ->select('p')
                 ->from('App\Entity\Post', 'p')
@@ -156,7 +150,6 @@ class UserController extends AbstractController
         }
 
         $adapter = new DoctrineORMAdapter($queryBuilder);
-//        $adapter = new ArrayAdapter($posts);
         $pagerfanta = new Pagerfanta($adapter);
 
         if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
@@ -276,6 +269,7 @@ class UserController extends AbstractController
 
                         $post->setImageId($lastImage->getId());
                         $post->setImagePath($newFileName. '.' .$extension);
+                        $post->setImage($lastImage);
                     } catch (\Exception $e) {
                         echo $e;
                     }
@@ -286,7 +280,7 @@ class UserController extends AbstractController
 
             try {
                 $entityManager->flush();
-                $this->addFlash('success', 'New post successfully added');
+                $this->addFlash('success', 'New post has been successfully added');
                 return $this->redirectToRoute('user_posts');
             } catch(\Exception $e) {
                 $this->addFlash('error', 'Error during saving');
@@ -355,25 +349,45 @@ class UserController extends AbstractController
         $form->handleRequest($request);
 
         if($form->isSubmitted() && $form->isValid()) {
-            $post = $form->getData();
+            $formData = $form->getData();
 
             $entityManager = $this->getDoctrine()->getManager();
-            $editPost = $entityManager->getRepository(Post::class)->find($post['id']);
+            $post = $entityManager->getRepository(Post::class)
+                    ->find($formData['id']);
 
-            $editPost->setTitle($post['title']);
-            $editPost->setContent($post['content']);
-            $editPost->setCategoryId($post['category_id']);
+            $post->setTitle($formData['title']);
+            $post->setContent($formData['content']);
+            $post->setCategoryId($formData['category_id']);
             $date = new \DateTime();
-            $editPost->setEditedAt($date);
-            $editPost->setUserId($userId);
+            $post->setEditedAt($date);
+            $post->setUserId($userId);
 
-            if($post['image_path'] != null) {
+            if($formData['image_path'] != null) {
                 $newFileName = 'image' . time();
-                $file = $form['image_path']->getData();
+                $file = $formData['image_path'];
                 $extension = $file->guessExtension();
 
                 if($file->move('img/posts', $newFileName . '.' . $extension)) {
-                    $editPost->setImagePath($newFileName . '.' . $extension);
+                    $image = $post->getImage();
+
+                    if(!$image) {
+                        $image = new Image();
+                        $em = $this->getDoctrine()->getManager();
+                        $image->setImagePath($newFileName . '.' . $extension);
+                        $em->persist($image);
+                        $em->flush();
+
+                        $qb = $entityManager->createQueryBuilder()
+                            ->select('i')
+                            ->from('App\Entity\Image', 'i')
+                            ->setMaxResults(1)
+                            ->orderBy('i.id', 'DESC');
+
+                        $lastImage = $qb->getQuery()->getSingleResult();
+                        $post->setImageId($lastImage->getId());
+                    }
+
+                    $image->setImagePath($newFileName . '.' . $extension);
                 }
             }
 

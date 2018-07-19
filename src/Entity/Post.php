@@ -65,7 +65,6 @@ class Post
     public $user_id;
 
     /**
-     * @ORM\Column(type="string", length=255, nullable=true)
      * @Assert\File(
      *     maxSize = "3072k",
      *     mimeTypes = {"image/jpeg", "image/png"},
@@ -88,6 +87,11 @@ class Post
      * @ORM\ManyToOne(targetEntity="App\Entity\User", inversedBy="posts")
      */
     private $user;
+
+    /**
+     * @ORM\OneToOne(targetEntity="App\Entity\Image", inversedBy="post")
+     */
+    private $image;
 
     public function getId()
     {
@@ -215,6 +219,18 @@ class Post
     public function setUser(?User $user)
     {
         $this->user = $user;
+
+        return $this;
+    }
+
+    public function getImage(): ?Image
+    {
+        return $this->image;
+    }
+
+    public function setImage(?Image $image)
+    {
+        $this->image = $image;
 
         return $this;
     }

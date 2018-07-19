@@ -33,7 +33,7 @@ class AdminController extends AbstractController
     /**
      * @Route("/admin/profile", name="admin_profile")
      */
-    public function adminLogin(Request $request, SessionInterface $session)
+    public function adminProfile(Request $request, SessionInterface $session)
     {
         $userId = $this->getUser()->getId();
 
@@ -152,8 +152,8 @@ class AdminController extends AbstractController
 
         if($form->isSubmitted() && $form->isValid()) {
             $formData = $form->getData();
-            $repository = $this->getDoctrine()->getRepository(Post::class);
 
+            $repository = $this->getDoctrine()->getRepository(Post::class);
             $post = $repository->findOneBy([
                 'id' => $formData['id']
             ]);
@@ -172,7 +172,26 @@ class AdminController extends AbstractController
                 $extension = $file->guessExtension();
 
                 if($file->move('img/posts', $newFileName . '.' . $extension)) {
-                    $post->setImagePath($newFileName . '.' . $extension);
+                    $image = $post->getImage();
+
+                    if(!$image) {
+                        $image = new Image();
+                        $em = $this->getDoctrine()->getManager();
+                        $image->setImagePath($newFileName . '.' . $extension);
+                        $em->persist($image);
+                        $em->flush();
+
+                        $qb = $entityManager->createQueryBuilder()
+                            ->select('i')
+                            ->from('App\Entity\Image', 'i')
+                            ->setMaxResults(1)
+                            ->orderBy('i.id', 'DESC');
+
+                        $lastImage = $qb->getQuery()->getSingleResult();
+                        $post->setImageId($lastImage->getId());
+                    }
+
+                    $image->setImagePath($newFileName . '.' . $extension);
                 }
             }
 
@@ -276,7 +295,7 @@ class AdminController extends AbstractController
                         $lastImage = $qb->getQuery()->getSingleResult();
 
                         $post->setImageId($lastImage->getId());
-                        $post->setImagePath($newFileName. '.' .$extension);
+                        $post->setImage($lastImage);
                     } catch (\Exception $e) {
                         echo $e;
                     }
@@ -546,42 +565,20 @@ class AdminController extends AbstractController
      */
     public function allmedia(Request $request)
     {
-        $repository = $this->getDoctrine()->getRepository(Post::class);
-        $posts = $repository->findAll();
+        $em = $this->getDoctrine()->getManager();
 
-        $temp = [];
-        foreach($posts as $post) {
-            if($post->image_path) {
-                array_push($temp, $post->image_path);
-            }
-        }
-
-        $files = scandir('img/posts');
-
-        $imagesInDir = [];
-        $flag = 0;
-        foreach($files as $key => $image) {
-            if($key > 1) {
-                foreach($temp as $item) {
-                    if($image == $item) {
-                        $flag = 1;
-                    }
-                }
-                if($flag == 1) {
-                    array_push($imagesInDir, ['path' => $image, 'used' => 1]);
-                    $flag = 0;
-                } else {
-                    array_push($imagesInDir, ['path' => $image, 'used' => 0]);
-                }
-            }
-        }
+        $queryBuilder = $em->createQueryBuilder()
+            ->select('i')
+            ->from('App\Entity\Image', 'i')
+            ->orderBy('i.id', 'DESC')
+            ->getQuery();
 
         $currentPage = $request->query->get('page');
         if(!$currentPage) {
             $currentPage = 1;
         }
 
-        $adapter = new ArrayAdapter($imagesInDir);
+        $adapter = new DoctrineORMAdapter($queryBuilder);
         $pagerfanta = new Pagerfanta($adapter);
 
         if($currentPage > $pagerfanta->getNbPages() || $currentPage < 1) {
@@ -603,36 +600,29 @@ class AdminController extends AbstractController
      */
     public function deleteImage(Request $request)
     {
-        $image = $request->request->get('image_name');
+        $imageId = $request->request->get('image_id');
 
-        $imagePath = 'img/posts/' . $image;
+        $repository = $this->getDoctrine()->getRepository(Image::class);
 
-        if(file_exists($imagePath)) {
-            $fileSystem = new Filesystem();
+        $em = $this->getDoctrine()->getManager();
+
+        $image = $repository->findOneBy(
+            [
+                'id' => $imageId
+            ]
+        );
+
+        if($image) {
+            $em->remove($image);
 
             try {
-                $repository = $this->getDoctrine()->getRepository(Post::class);
-                $entityManager = $this->getDoctrine()->getManager();
-
-                $post = $repository->findOneBy([
-                    'image_path' => $image
-                ]);
-
-                if($post) {
-                    if($post->image_path == $image) {
-                        $post->setImagePath('');
-                        $entityManager->flush();
-                    }
-                }
-
-                $fileSystem->remove($imagePath);
-
+                $em->flush();
                 $this->addFlash('success', 'Image has been successfully deleted');
             } catch(\Exception $e) {
                 $this->addFlash('error', 'Error during delete image');
             }
         } else {
-            $this->addFlash('error', 'Selected file not exsits');
+            $this->addFlash('error', "Selected file does not exist");
         }
 
         return $this->redirectToRoute('admin_media');
@@ -643,38 +633,27 @@ class AdminController extends AbstractController
      */
     public function deleteImages(Request $request)
     {
-        $images = $request->request->get('checkbox');
+        $imageIds = $request->request->get('checkbox');
+
+        $repository = $this->getDoctrine()->getRepository(Image::class);
+
+        $images = $repository->findBy(
+            [
+                'id' => $imageIds
+            ]
+        );
 
         if($images) {
-            $repository = $this->getDoctrine()->getRepository(Post::class);
-            $entityManager = $this->getDoctrine()->getManager();
-            $fileSystem = new Filesystem();
-
+            $em = $this->getDoctrine()->getManager();
             foreach($images as $image) {
-                $imagePath = 'img/posts/' . $image;
-
-                if(file_exists($imagePath)) {
-                    try {
-                        $post = $repository->findOneBy([
-                            'image_path' => $image
-                        ]);
-
-                        if($post) {
-                            if($post->image_path == $image) {
-                                $post->setImagePath('');
-                                $entityManager->flush();
-                            }
-                        }
-                        $fileSystem->remove($imagePath);
-                        $msg = 'Selected images have been successfully deleted';
-                    } catch(\Exception $e) {
-                        $this->addFlash('error', 'Error during delete selected images');
-                    }
-                }
+                $em->remove($image);
             }
 
-            if($msg) {
-                $this->addFlash('success', $msg);
+            try {
+                $em->flush();
+                $this->addFlash('success', 'Selected images have been successfully deleted');
+            } catch(\Exception $e ) {
+                $this->addFlash('error', 'Error during delete selected images');
             }
         }
 

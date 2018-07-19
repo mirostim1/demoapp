@@ -36,20 +36,22 @@ class User implements UserInterface, \Serializable
 
     /**
      * @ORM\Column(type="string", length=255, unique=true)
-     * @Assert\NotBlank(groups={"Registration"})
-     * @Assert\Email()
+     * @Assert\NotBlank(groups={"registration"})
+     * @Assert\Email(groups={"registration", "Default"})
      * @Assert\Length(
      *     min=2,
-     *     max=70
+     *     max=70,
+     *     groups={"registration", "Default"}
      * )
      */
     private $username;
 
     /**
-     * @Assert\NotBlank()
+     * @Assert\NotBlank(groups={"Default", "registration"})
      * @Assert\Length(
      *     min=2,
-     *     max=70
+     *     max=70,
+     *     groups={"Default", "registration"}
      *)
      */
     private $plainPassword;

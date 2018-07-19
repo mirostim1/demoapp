@@ -33,23 +33,17 @@
                     <th><input id="chkbox" type="checkbox"></th>
                     <th>Thumbnail</th>
                     <th>Name</th>
-                    <th>Used in Post</th>
                     <th>Delete</th>
                 </thead>
                 <tbody>
                 {% for image in my_pager.currentPageResults %}
                 <tr>
-                    <td><input type="checkbox" class="checkbox" name="checkbox[]" value="{{ image.path }}"></td>
+                    <td><input type="checkbox" class="checkbox" name="checkbox[]" value="{{ image.id }}"></td>
         </form>
-                    <td><img width="50px" src="/img/posts/{{ image.path }}"/></td>
-                    <td>{{ image.path }}</td>
-                    {% if image.used == 1 %}
-                        <td>Yes</td>
-                    {% else %}
-                        <td>No</td>
-                    {% endif %}
+                    <td><img width="50px" src="/img/posts/{{ image.imagePath }}"/></td>
+                    <td>{{ image.imagePath }}</td>
                     <form action="/admin/deleteimage" method="post">
-                        <td><button class="btn btn-danger" name="image_name" value="{{ image.path }}">Delete</button></td>
+                        <td><button class="btn btn-danger" name="image_id" value="{{ image.id }}">Delete</button></td>
                     </form>
                 </tr>
                 </tbody>
@@ -67,9 +61,6 @@
 
 {% block javascripts %}
     <script>
-
-        // var $j = jQuery.noConflict();
-
         $(document).ready(function() {
 
             $('#chkbox').on('click', function() {

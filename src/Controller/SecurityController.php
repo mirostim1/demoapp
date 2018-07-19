@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\Routing\Annotation\Route;
@@ -12,6 +13,7 @@ use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class SecurityController extends Controller
 {
@@ -42,11 +44,13 @@ class SecurityController extends Controller
     /**
      * @Route("/register", name="register")
      */
-    public function register(Request $request, UserPasswordEncoderInterface $passwordEncoder)
+    public function register(Request $request, UserPasswordEncoderInterface $passwordEncoder, ValidatorInterface $validator)
     {
         $user = new User();
 
-        $form = $this->createFormBuilder($user)
+        $form = $this->createFormBuilder($user, array(
+                'validation_groups' => array('registration')
+            ))
             ->add('username', EmailType::class, array(
                 'label' => 'Enter Email *',
                 'attr' => ['class' => 'form-control']

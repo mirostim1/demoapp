@@ -39,9 +39,9 @@
                 {% for post in my_pager.currentPageResults %}
                     <tr>
                         <td>{{ post.id }}</td>
-                        {% if post.image_path != '' %}
+                        {% if post.imageId != null %}
                             <td>
-                                <img width="50px" src="/img/posts/{{ post.image_path }}"/>
+                                <img width="50px" src="/img/posts/{{ post.image.imagePath }}"/>
                             </td>
                         {% else %}
                             <td>
