@@ -49,7 +49,7 @@ class Image
     /**
      * @return Collection|Post[]
      */
-    public function getPost(): Collection
+    public function getPost()
     {
         return $this->post;
     }

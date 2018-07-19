@@ -33,6 +33,7 @@
                     <th><input id="chkbox" type="checkbox"></th>
                     <th>Thumbnail</th>
                     <th>Name</th>
+                    <th>Used in Post</th>
                     <th>Delete</th>
                 </thead>
                 <tbody>
@@ -42,6 +43,13 @@
         </form>
                     <td><img width="50px" src="/img/posts/{{ image.imagePath }}"/></td>
                     <td>{{ image.imagePath }}</td>
+                    <td>
+                        {% if image.post != null %}
+                            {{ 'Yes' }}
+                        {% else %}
+                            {{ 'No' }}
+                        {% endif %}
+                    </td>
                     <form action="/admin/deleteimage" method="post">
                         <td><button class="btn btn-danger" name="image_id" value="{{ image.id }}">Delete</button></td>
                     </form>
